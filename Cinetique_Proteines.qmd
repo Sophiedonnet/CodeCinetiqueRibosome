@@ -1,0 +1,93 @@
+---
+title: "Vitesse de synthèse"
+author: "Sophie, François, Karen"
+format: html
+editor: visual
+---
+
+## Contexte
+
+On s'intéresse à des images composées de points verts et rouges, chaque point correspondant à un bout précis de l'ADN.
+
+Quand ces bouts d'ADN ont été lus, la particule s'éteint.
+
+Cependant, ces particuliers s'éteignent aussi même sans avoir été lus (parce que éclairés trop longtemps par exemple).
+
+On note $i$ un bout d'ADN représenté par un point vert et un point rouge. Soit $n$ leur nombre.
+
+Après traitement d'image, on peut observer sur un intervalle de temps donné $[T_0, T]$, les instants de mort $$(T_i^R, T^V_i)_{i=1,\dots n}.$$
+
+Deux processus de morts sont à l'oeuvre et se cumulent:
+
+-   Mort naturelle (dûe à la durée de l'éclairage)
+
+-   Mort par lecture
+
+Pour toute entité $i$, soit $U_i^{R}$ l'instant de mort naturelle de la particule $R$ (idem pour $V$) et soit $V_i^{R}$ sa mort par lecture.
+
+Alors
+
+$$\left\{
+\begin{array}{ccl}
+T_i^{R} &=& \min(U_i^{R},V_i^R)\\
+T_i^{V} &=& \min(U_i^{V},V_i^V)
+\end{array}
+\right.
+$$
+
+De plus, par lecture le long du ribosome, la verte s'éteint avant la rouge.
+
+$$ V_i^R > V_i^V$$ \## Données
+
+On observe deux types de données.
+
+-Expérience 1 : données de contrôle permettent d'observer le phénomène de mort naturelle $(T_i^{C})_{i=1, \dots,n_C}$.
+
+-Expérience 2 : expérience de lecture $(T_i^{R}, T_i^V)_{i=1, \dots,n}$.
+
+## Le modèle
+
+$$
+\left\{
+\begin{array}{cclcl}
+U_i^R &\sim&   \mathcal{F}(\theta_{N}) &=& \Gamma(\alpha_N,\beta_N)\\
+U_i^V &\sim&   \mathcal{F}(\theta_{N}) &=& \Gamma(\alpha_N,\beta_N) \\
+V_i^V  &\sim&    \mathcal{F}(\theta_{L}) &=& \mathcal{E}(\lambda_c) + \Gamma(k, \lambda_e)  \\
+V_i^R  &\sim&  V_i^V + \mathcal{F}(\nu_{L}) &=& V_i^V + \Gamma(k', \lambda_e)  \\
+T_i^{R} &=&  \min(U_i^{R},V_i^R)\\
+T_i^{V} &=& \min(U_i^{V},V_i^V)
+\end{array}
+\right.
+$$
+
+$\alpha_N$ et $\beta_N$ sont les paramètres de mort spontanée. $\lambda_c$ représente le temps pour que la particule de rejoindre la protéine. $k$ est le nombre de codons. $\lambda_c$ est le paramètre de lecture pour chaque codon. $k'$ est le nombre de codons entre le début et la fin de la séquence.
+
+## Estimation des paramètres de mort spontanée.
+
+Ces paramètres peuvent être estimés à partir des données de l'expérience dite de contrôle. Les temps $(T_i^C)_{i=1,\dots,c_C}$ suivent le modèle suivant:
+
+$$
+\begin{array}{ccl}
+T_i^{C} &\sim& \Gamma(\alpha_N, \beta_N)
+\end{array}
+$$ Par conséquent, les paramètres $\alpha_N$ et $\beta_N$ peuvent être estimés par les estimateurs des moments.
+
+$$\widehat{\alpha}_N = \frac{\overline{T^C}^2}{Var(T^C)}, \quad \widehat{\beta}_N = \frac{\widehat{\alpha}_N}{\overline{T^C}}$$
+
+## Estimation des paramètres de synthèse.
+
+On cherche à estimer $\lambda_e$ et $\lambda_c$. On fixe $\hat{\theta}_N = (\widehat{\alpha}_N,\widehat{\beta}_N)$.
+
+On estime $\lambda_e$ et $\lambda_c$ en maximisant la vraisemblance.
+
+### Ecriture de la vraisemblance
+
+$$(\widehat{\lambda_e}, \widehat{\lambda_c}) = \arg\max \log \mathcal{L} \left((T_i^R,T_i^V)_{i=1,\dots,n}; \widehat{\theta}_N,\lambda_e,\lambda_c\right)$$
+
+Les temps $T_i^R,T_i^V$ ne sont pas la réalisation de variables aléatoires indépendantes. Cependant leur loi jointe est difficile à calculer. Nous proposons de modifier le critère de la façon suivante:
+
+$$ (\widehat{\lambda_e}, \widehat{\lambda_c}) = \arg\max \log \mathcal{L} \left((T_i^R)_{i=1,\dots,n}; \widehat{\theta}_N,\lambda_e,\lambda_c\right) + \log \mathcal{L} \left((T_i^V)_{i=1,\dots,n}; \widehat{\theta}_N,\lambda_e,\lambda_c\right)
+$$ Il faut maintenant l'expression de chaque terme donc avoir la loi marginale de $T_i^R$ et $T_i^V$.\
+$T_i^R$ s'exprime comme le $\min$ de deux quantités. Il faut donc en déduire sa dénsité.
+
+**Rappel**

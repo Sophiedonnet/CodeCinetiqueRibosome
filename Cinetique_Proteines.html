@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.0.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Sophie, François, Karen">
+
+<title>Vitesse de synthèse</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+<script src="Cinetique_Proteines_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Cinetique_Proteines_files/libs/quarto-html/quarto.js"></script>
+<script src="Cinetique_Proteines_files/libs/quarto-html/popper.min.js"></script>
+<script src="Cinetique_Proteines_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Cinetique_Proteines_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Cinetique_Proteines_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Cinetique_Proteines_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Cinetique_Proteines_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Cinetique_Proteines_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Cinetique_Proteines_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Vitesse de synthèse</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Sophie, François, Karen </p>
+          </div>
+  </div>
+    
+    
+  </div>
+  
+
+</header>
+
+<section id="contexte" class="level2">
+<h2 class="anchored" data-anchor-id="contexte">Contexte</h2>
+<p>On s’intéresse à des images composées de points verts et rouges, chaque point correspondant à un bout précis de l’ADN.</p>
+<p>Quand ces bouts d’ADN ont été lus, la particule s’éteint.</p>
+<p>Cependant, ces particuliers s’éteignent aussi même sans avoir été lus (parce que éclairés trop longtemps par exemple).</p>
+<p>On note <span class="math inline">\(i\)</span> un bout d’ADN représenté par un point vert et un point rouge. Soit <span class="math inline">\(n\)</span> leur nombre.</p>
+<p>Après traitement d’image, on peut observer sur un intervalle de temps donné <span class="math inline">\([T_0, T]\)</span>, les instants de mort <span class="math display">\[(T_i^R, T^V_i)_{i=1,\dots n}.\]</span></p>
+<p>Deux processus de morts sont à l’oeuvre et se cumulent:</p>
+<ul>
+<li><p>Mort naturelle (dûe à la durée de l’éclairage)</p></li>
+<li><p>Mort par lecture</p></li>
+</ul>
+<p>Pour toute entité <span class="math inline">\(i\)</span>, soit <span class="math inline">\(U_i^{R}\)</span> l’instant de mort naturelle de la particule <span class="math inline">\(R\)</span> (idem pour <span class="math inline">\(V\)</span>) et soit <span class="math inline">\(V_i^{R}\)</span> sa mort par lecture.</p>
+<p>Alors</p>
+<p><span class="math display">\[\left\{
+\begin{array}{ccl}
+T_i^{R} &amp;=&amp; \min(U_i^{R},V_i^R)\\
+T_i^{V} &amp;=&amp; \min(U_i^{V},V_i^V)
+\end{array}
+\right.
+\]</span></p>
+<p>De plus, par lecture le long du ribosome, la verte s’éteint avant la rouge.</p>
+<p><span class="math display">\[ V_i^R &gt; V_i^V\]</span> ## Données</p>
+<p>On observe deux types de données.</p>
+<p>-Expérience 1 : données de contrôle permettent d’observer le phénomène de mort naturelle <span class="math inline">\((T_i^{C})_{i=1, \dots,n_C}\)</span>.</p>
+<p>-Expérience 2 : expérience de lecture <span class="math inline">\((T_i^{R}, T_i^V)_{i=1, \dots,n}\)</span>.</p>
+</section>
+<section id="le-modèle" class="level2">
+<h2 class="anchored" data-anchor-id="le-modèle">Le modèle</h2>
+<p>$$</p>
+{
+<span class="math display">\[\begin{array}{cclcl}
+U_i^R &amp;\sim&amp;   \mathcal{F}(\theta_{N}) &amp;=&amp; \Gamma(\alpha_N,\beta_N)\\
+U_i^V &amp;\sim&amp;   \mathcal{F}(\theta_{N}) &amp;=&amp; \Gamma(\alpha_N,\beta_N) \\
+V_i^V  &amp;\sim&amp;    \mathcal{F}(\theta_{L}) &amp;=&amp; \mathcal{E}(\lambda_c) + \Gamma(k, \lambda_e)  \\
+V_i^R  &amp;\sim&amp;  V_i^V + \mathcal{F}(\nu_{L}) &amp;=&amp; V_i^V + \Gamma(k', \lambda_e)  \\
+T_i^{R} &amp;=&amp;  \min(U_i^{R},V_i^R)\\
+T_i^{V} &amp;=&amp; \min(U_i^{V},V_i^V)
+\end{array}\]</span>
+<p>.</p>
+<p>$$</p>
+<p><span class="math inline">\(\alpha_N\)</span> et <span class="math inline">\(\beta_N\)</span> sont les paramètres de mort spontanée. <span class="math inline">\(\lambda_c\)</span> représente le temps pour que la particule de rejoindre la protéine. <span class="math inline">\(k\)</span> est le nombre de codons. <span class="math inline">\(\lambda_c\)</span> est le paramètre de lecture pour chaque codon. <span class="math inline">\(k'\)</span> est le nombre de codons entre le début et la fin de la séquence.</p>
+</section>
+<section id="estimation-des-paramètres-de-mort-spontanée." class="level1">
+<h1>Estimation des paramètres de mort spontanée.</h1>
+<p>Ces paramètres peuvent être estimés à partir des données de l’expérience dite de contrôle. Les temps <span class="math inline">\((T_i^C)_{i=1,\dots,c_C}\)</span> suivent le modèle suivant:</p>
+<p>$$</p>
+<span class="math display">\[\begin{array}{ccl}
+T_i^{C} &amp;\sim&amp; \Gamma(\alpha_N, \beta_N)
+\end{array}\]</span>
+<p>$$ Par conséquent, les paramètres <span class="math inline">\(\alpha_N\)</span> et <span class="math inline">\(\beta_N\)</span> peuvent être estimés par les estimateurs des moments.</p>
+<p><span class="math display">\[\widehat{\alpha}_N = \frac{\overline{T^C}^2}{Var(T^C)}, \quad \widehat{\beta}_N = \frac{\widehat{\alpha}_N}{\overline{T^C}}\]</span></p>
+<section id="running-code" class="level2">
+<h2 class="anchored" data-anchor-id="running-code">Running Code</h2>
+<p>The <code>echo: false</code> option disables the printing of code (only output is displayed).</p>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    setTimeout(function() {
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      let href = ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const cites = ref.parentNode.getAttribute('data-cites').split(' ');
+    tippyHover(ref, function() {
+      var popup = window.document.createElement('div');
+      cites.forEach(function(cite) {
+        var citeDiv = window.document.createElement('div');
+        citeDiv.classList.add('hanging-indent');
+        citeDiv.classList.add('csl-entry');
+        var biblioDiv = window.document.getElementById('ref-' + cite);
+        if (biblioDiv) {
+          citeDiv.innerHTML = biblioDiv.innerHTML;
+        }
+        popup.appendChild(citeDiv);
+      });
+      return popup.innerHTML;
+    });
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
