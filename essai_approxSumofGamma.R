@@ -13,19 +13,22 @@ lambda_e <- 1/0.5
 lambda_c <- 1/15
 k <- 16
 kprime <- 30
-#l   <- 50
-param <- c(l,lambda_e)
+
+alpha_N_R <- 1000
 
 
 ### données expérimentales  SIMULATION  exp(lambda_c) + Gamma(k, lambda_e)
 VV <-   rgamma(n,1,lambda_c) + rgamma(n,k,lambda_e)
-
 UV  <- rgamma(n,alpha_N,beta_N)
+TV <- apply(cbind(UV,VV),1,min)
+summary(TV)
 
-
-### approx 1 :
-l <- lambda_e / lambda_c
-param_1 <- c(l+k,lambda_e)
+UR  <- rgamma(n,alpha_N_R,beta_N)
+VR <- VV  + rgamma(n,kprime,lambda_e)
+TR <-  apply(cbind(UR,VR),1,min)
+summary(UR)
+summary(TR)
+summary(VR)
 
 ### approx 2;
 R <- sum(c(1,k)/c(lambda_c,lambda_e))
@@ -33,103 +36,162 @@ Q <- sum(c(1,k)/c(lambda_c,lambda_e)^2)
 k_sum <- R^2/Q
 lambda_sum <- k_sum/R
 
-hist(VV,nclass = n/10,freq = FALSE)
 plot(density(VV))
-curve(dgamma(x,param_1[1], param_1[2]),add=TRUE,col='red')
-curve(dgamma(x,k_sum, lambda_sum),add=TRUE,col='green')
+#curve(dgamma(x,k_sum, lambda_sum),add=TRUE,col='green')
+m <- emg.mle(VV)
+curve(demg(x,m@coef[1],m@coef[2],m@coef[3]),add=TRUE,col='cyan')
+
+
+
+
+R <- sum(c(1,k+kprime)/c(lambda_c,lambda_e))
+Q <- sum(c(1,k+prime)/c(lambda_c,lambda_e)^2)
+k_sum <- R^2/Q
+lambda_sum <- k_sum/R
+m <- emg.mle(VR)
+
+plot(density(VR))
+curve(dgamma(x,k_sum, lambda_sum),add=TRUE,col='red')
+curve(demg(x,m@coef[1],m@coef[2],m@coef[3]),add=TRUE,col='cyan')
+
+
+
 
 #VV <-   rgamma(n,l,lambda_e) + rgamma(n,k,lambda_e)
 
-TV <- apply(cbind(UV,VV),1,min)
 
-UR  <- rgamma(n,alpha_N,beta_N)
-VR <- VV  + rgamma(n,kprime,lambda_e)
-TR <-  apply(cbind(UR,VR),1,min)
 
 
 #####  verif distributions
 
 #------- TV
 
-dens_TV <- function(x,lambda_e,l,k,theta_N){
+# dens_TV <- function(x,lambda_c,lambda_e,k,theta_N){
+# 
+# #  theta_L <- c(k+l,lambda_e)
+#   R <- sum(c(1,k)/c(lambda_c,lambda_e))
+#   Q <- sum(c(1,k)/c(lambda_c,lambda_e)^2)
+#   k_sum <- R^2/Q
+#   lambda_sum <- k_sum/R
+#   theta_L <- c(k_sum,lambda_sum)
+#   F1z <- pgamma(x,theta_L[1],theta_L[2])
+#   f1z <- dgamma(x,theta_L[1],theta_L[2])
+#   
 
-#  theta_L <- c(k+l,lambda_e)
-  R <- sum(c(1,k)/c(lambda_c,lambda_e))
-  Q <- sum(c(1,k)/c(lambda_c,lambda_e)^2)
-  k_sum <- R^2/Q
-  lambda_sum <- k_sum/R
-  theta_L <- c(k_sum,lambda_sum)
+#   F2z <- pgamma(x,theta_N[1],theta_N[2])
+#   f2z <- dgamma(x,theta_N[1],theta_N[2])
+#   f1z*(1-F2z) + f2z*(1-F1z)
+# }
 
-  F1z <- pgamma(x,theta_L[1],theta_L[2])
-  f1z <- dgamma(x,theta_L[1],theta_L[2])
+dens_TV <- function(x,lambda_c,mu,sigma,theta_N){
+  
+  #  theta_L <- c(k+l,lambda_e)
+  #R <- sum(c(1,k)/c(lambda_c,lambda_e))
+  #Q <- sum(c(1,k)/c(lambda_c,lambda_e)^2)
+  #k_sum <- R^2/Q
+  #lambda_sum <- k_sum/R
+  #theta_L <- c(k_sum,lambda_sum)
+  #F1z <- pgamma(x,theta_L[1],theta_L[2])
+  #f1z <- dgamma(x,theta_L[1],theta_L[2])
+  
+  F1z <- pemg(x,lambda=lambda_c,mu=mu,sigma=sigma)
+  f1z <- demg(x,lambda=lambda_c,mu=mu,sigma=sigma)
+  
   F2z <- pgamma(x,theta_N[1],theta_N[2])
   f2z <- dgamma(x,theta_N[1],theta_N[2])
   f1z*(1-F2z) + f2z*(1-F1z)
 }
 
+
+
 hist(TV,nclass = n/10,freq = FALSE)
-curve(dens_TV(x,lambda_e,l,k,theta_N),add=TRUE,col='red')
+lines(density(TV),col='orange')
+m <- emg.mle(VV)
+lambda_c_est <- m@coef[3]
+mu <- m@coef[1]
+sigma <- m@coef[2]
+curve(dens_TV(x,lambda_c_est,mu,sigma,theta_N),add=TRUE,col='green')
 
-prob_TV <- function(x,lambda_e,l,k,theta_N){
+
+# prob_TV <- function(x,lambda_c,lambda_e,k,theta_N){
+#   #theta_L <- c(k+l,lambda_e)
+#   R <- sum(c(1,k)/c(lambda_c,lambda_e))
+#   Q <- sum(c(1,k)/c(lambda_c,lambda_e)^2)
+#   k_sum <- R^2/Q
+#   lambda_sum <- k_sum/R
+#   theta_L <- c(k_sum,lambda_sum)
+# 
+#   F1z <- pgamma(x,theta_L[1],theta_L[2])
+#   F2z <- pgamma(x,theta_N[1],theta_N[2])
+#   1-(1-F1z)*(1-F2z)
+# 
+# }
+prob_TV <- function(x,lambda_c,lambda_e,mu_sigma,theta_N){
   #theta_L <- c(k+l,lambda_e)
-  R <- sum(c(1,k)/c(lambda_c,lambda_e))
-  Q <- sum(c(1,k)/c(lambda_c,lambda_e)^2)
-  k_sum <- R^2/Q
-  lambda_sum <- k_sum/R
-  theta_L <- c(k_sum,lambda_sum)
+  #R <- sum(c(1,k)/c(lambda_c,lambda_e))
+  #Q <- sum(c(1,k)/c(lambda_c,lambda_e)^2)
+  #k_sum <- R^2/Q
+  #lambda_sum <- k_sum/R
+  #theta_L <- c(k_sum,lambda_sum)
 
-  F1z <- pgamma(x,theta_L[1],theta_L[2])
+  F1z <- pemg(x,lambda_e,mu,sigma)
   F2z <- pgamma(x,theta_N[1],theta_N[2])
   1-(1-F1z)*(1-F2z)
 
 }
 
+
+
 plot(ecdf(TV))
-curve(prob_TV(x,lambda_e,l,k,theta_N),add=TRUE,col='red')
+curve(prob_TV(x,lambda_c,lambda_e_est,mu,sigma,theta_N),add=TRUE,col='green')
 
 
 #------- TR
 
-dens_VR <- function(x,lambda_e,l,k,kprime){
-  dgamma(x,k+kprime+l,lambda_e)
+#dens_VR <- function(x,lambda_e,l,k,kprime){
+#  dgamma(x,k+kprime+l,lambda_e)
+#}
+
+#plot(density(VR))
+#curve(dens_VR(x,lambda_e,l,k,kprime),add=TRUE,col='red')
+
+
+#prob_VR <- function(x,lambda_e,l,k,kprime){
+#  pgamma(x,k+kprime+l,lambda_e)
+#}
+
+
+dens_TR <- function(x,lambda_c,lambda_e,k,kprime,theta_N){
+  dens_TV(x,lambda_c,lambda_e,k+kprime,theta_N)
+}
+  
+prob_TR <- function(x,lambda_c,lambda_e,k,kprime,theta_N){
+  prob_TV(x,lambda_c,lambda_e,k+kprime,theta_N)
 }
 
-plot(density(VR))
-curve(dens_VR(x,lambda_e,l,k,kprime),add=TRUE,col='red')
 
 
-prob_VR <- function(x,lambda_e,l,k,kprime){
-  pgamma(x,k+kprime+l,lambda_e)
-}
-
-plot(ecdf(VR))
-curve(prob_VR(x,lambda_e,l,k,kprime),add=TRUE,col='red')
-
-
-prob_TR <- function(x,lambda_e,l,k,kprime,theta_N){
-  1-(1-prob_VR(x,lambda_e,l,k,kprime))*(1-pgamma(x,theta_N[1],theta_N[2]))
-}
 
 plot(ecdf(TR))
-curve(prob_TR(x,lambda_e,l,k,kprime,theta_N),add=TRUE,col='red')
+theta_N_R <- c(alpha_N_R,beta_N)
+curve(prob_TR(x,lambda_c,lambda_e,k,kprime,theta_N_R),add=TRUE,col='red')
 
 
 
-dens_TR <- function(x,lambda_e,l,k,kprime,theta_N){
+#dens_TR <- function(x,lambda_e,l,k,kprime,theta_N){
+#
+#  F_VR <- prob_VR(x,lambda_e,l,k,kprime)
+#  f_VR <- dens_VR(x,lambda_e,l,k,kprime)
+#  F_UR <- pgamma(x,theta_N[1],theta_N[2])
+#  f_UR <- dgamma(x,theta_N[1],theta_N[2])
+#  f_VR*(1-F_UR) + f_UR*(1-F_VR)
+#}
 
-  F_VR <- prob_VR(x,lambda_e,l,k,kprime)
-  f_VR <- dens_VR(x,lambda_e,l,k,kprime)
-
-  F_UR <- pgamma(x,theta_N[1],theta_N[2])
-  f_UR <- dgamma(x,theta_N[1],theta_N[2])
-  f_VR*(1-F_UR) + f_UR*(1-F_VR)
-
-}
 
 
 hist(TR,freq=FALSE,nclass=n/10)
 lines(density(TR),col='orange')
-curve(dens_TR(x,lambda_e,l,k,kprime,theta_N),add=TRUE,col='red')
+curve(dens_TR(x,lambda_c,lambda_e,k,kprime,theta_N_R),add=TRUE,col='red')
 
 
 ################################################""
@@ -147,6 +209,7 @@ estim_param_Gamma <- function(X){
 
 
 #-----------------------------------  ESTIM theta_N  = (alpha_N, beta_N)----
+TC <-  rgamma(n_C,alpha_N,beta_N)
 theta_N_hat<- estim_param_Gamma(TC)
 cbind(theta_N,theta_N_hat)
 #------------------------------------- ESTIM l,lambda_e, -----
@@ -164,7 +227,7 @@ log_lik_TV_TR <- function(log_param,theta_N,k,kprime,TV,TR){
 
 
 lambda_e_init <- 0.5*(estim_param_Gamma(TV)[2] + estim_param_Gamma(TR)[2])
-l_init <- 0.5*(estim_param_Gamma(TV)[1]-k + estim_param_Gamma(TR)[1]-k-kprime)
+l_init <- 22#% 0.5*(estim_param_Gamma(TV)[1]-k + estim_param_Gamma(TR)[1]-k-kprime)
 log_param_init <- c(log(l_init),log(lambda_e_init))
 log_param<- log(c(l,lambda_e))
 log_lik_TV_TR(log_param,theta_N,k,kprime,TV,TR)

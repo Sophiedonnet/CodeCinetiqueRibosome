@@ -13,7 +13,7 @@ Quand ces bouts d'ADN ont été lus, la particule s'éteint.
 
 Cependant, ces particuliers s'éteignent aussi même sans avoir été lus (parce que éclairés trop longtemps par exemple).
 
-On note $i$ un bout d'ADN représenté par un point vert et un point rouge. Soit $n$ leur nombre.
+On note $i$ un bout d'ARN représenté par un point vert et un point rouge. Soit $n$ leur nombre.
 
 Après traitement d'image, on peut observer sur un intervalle de temps donné $[T_0, T]$, les instants de mort $$(T_i^R, T^V_i)_{i=1,\dots n}.$$
 
