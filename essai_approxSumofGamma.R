@@ -1,7 +1,8 @@
 rm(list=ls())
-library(e1071)
+#library(e1071)
+library(ggplot2)
 ##################################################
-################"" Lois exponentielles
+################ Illustration de l'approx de somme de Gamma
 ###################################################
 
 n <- n_C  <-1000

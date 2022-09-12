@@ -1,9 +1,13 @@
 ---
 title: "Vitesse de synthèse"
-author: "Sophie, François, Karen"
+author: "Sophie D., François M., Karen P."
 format: html
 editor: visual
 ---
+
+```{r, echo= FALSE, eval = TRUE, message= FALSE}
+library(ggplot2)
+```
 
 ## Contexte
 
@@ -27,17 +31,18 @@ Pour toute entité $i$, soit $U_i^{R}$ l'instant de mort naturelle de la particu
 
 Alors
 
-$$\left\{
-\begin{array}{ccl}
-T_i^{R} &=& \min(U_i^{R},V_i^R)\\
-T_i^{V} &=& \min(U_i^{V},V_i^V)
-\end{array}
-\right.
-$$
+\begin{aligned}
+T_i^{R} &= \min(U_i^{R},V_i^R)\\
+T_i^{V} &= \min(U_i^{V},V_i^V)
+\end{aligned}
+
+
 
 De plus, par lecture le long du ribosome, la verte s'éteint avant la rouge.
 
-$$ V_i^R > V_i^V$$ \## Données
+$$ V_i^R > V_i^V$$ 
+
+## Données
 
 On observe deux types de données.
 
@@ -60,7 +65,7 @@ T_i^{V} &=& \min(U_i^{V},V_i^V)
 \right.
 $$
 
-$\alpha_N$ et $\beta_N$ sont les paramètres de mort spontanée. $\lambda_c$ représente le temps pour que la particule de rejoindre la protéine. $k$ est le nombre de codons. $\lambda_c$ est le paramètre de lecture pour chaque codon. $k'$ est le nombre de codons entre le début et la fin de la séquence.
+$\alpha_N$ et $\beta_N$ sont les paramètres de mort spontanée. $\lambda_c$ représente le temps pour que la particule de rejoindre la protéine. $k$ est le nombre de codons. $\lambda_e$ est le paramètre de lecture pour chaque codon (???). $k'$ est le nombre de codons (???) entre le début et la fin de la séquence.
 
 ## Estimation des paramètres de mort spontanée.
 
@@ -70,7 +75,10 @@ $$
 \begin{array}{ccl}
 T_i^{C} &\sim& \Gamma(\alpha_N, \beta_N)
 \end{array}
-$$ Par conséquent, les paramètres $\alpha_N$ et $\beta_N$ peuvent être estimés par les estimateurs des moments.
+$$ 
+
+
+Par conséquent, les paramètres $\alpha_N$ et $\beta_N$ peuvent être estimés par les estimateurs des moments.
 
 $$\widehat{\alpha}_N = \frac{\overline{T^C}^2}{Var(T^C)}, \quad \widehat{\beta}_N = \frac{\widehat{\alpha}_N}{\overline{T^C}}$$
 
@@ -82,7 +90,9 @@ On estime $\lambda_e$ et $\lambda_c$ en maximisant la vraisemblance.
 
 ### Ecriture de la vraisemblance
 
-$$(\widehat{\lambda_e}, \widehat{\lambda_c}) = \arg\max \log \mathcal{L} \left((T_i^R,T_i^V)_{i=1,\dots,n}; \widehat{\theta}_N,\lambda_e,\lambda_c\right)$$
+$$(\widehat{\lambda_e}, \widehat{\lambda_c}) = \arg\max \log \mathcal{L} \left((T_i^R,T_i^V)_{i=1,\dots,n}; \widehat{\theta}_N,\lambda_e,\lambda_c\right)
+$$
+
 
 Les temps $T_i^R,T_i^V$ ne sont pas la réalisation de variables aléatoires indépendantes. Cependant leur loi jointe est difficile à calculer. Nous proposons de modifier le critère de la façon suivante:
 
@@ -91,3 +101,80 @@ $$ Il faut maintenant l'expression de chaque terme donc avoir la loi marginale d
 $T_i^R$ s'exprime comme le $\min$ de deux quantités. Il faut donc en déduire sa dénsité.
 
 **Rappel**
+
+Si $T = \min(U,V)$ avec $U \sim f_U$ et $V \sim f_V$ alors
+
+$$
+\begin{array}{ccl}
+F_{T}(t) &=& 1 - (1-F_{U}(t))(1-F_{V}(t))\\
+f_{T}(x)  &=& f_{V}(x) F_{U}(x) + F_{V}(x) f_{U}(x) - f_{V}(x)  - f_{U}(x)
+\end{array}
+$$
+
+Nous avons besoin de $(f_{U^R}, F_{U^R})$ et $(f_{V^R}, F_{V^R})$.
+
+$$V^V \sim \mathcal{E}(\lambda_c)+ \Gamma(k,\lambda_e) = \Gamma(1,\lambda_c)+ \Gamma(k,\lambda_e)$$
+
+Cette loi n'a pas de densité explicite mais comme somme de loi Gamma on peut l'approcher la façon suivante:
+
+$$ \Gamma(1,\lambda_e)+ \Gamma(k,\lambda_c) \approx \Gamma(k_L,\lambda_L)$$ 
+avec 
+
+$$
+\begin{array}{cclccl}
+R &=& \frac{1}{\lambda_c} + \frac{k}{\lambda_e}, & 
+Q &=& \frac{1}{\lambda_c^2} + \frac{k}{\lambda_e^2}\\
+k_L &=& \frac{R^2}{Q},& \lambda_L &=&\frac{k_L}{R}
+\end{array}
+$$ 
+
+
+### Illustration de l'approximation de la somme de 2 lois Gamma par une loi Gamma
+
+```{r approx sum Gamma}
+
+# paramètres 
+lambda_e <- 1/0.5
+lambda_c <- 1/15
+k <- 16
+
+# Simulation d'un échantillon
+n <- 10000;
+VV <- rgamma(n,1,lambda_c) + rgamma(n,k,lambda_e)
+VV <- as.data.frame(VV)
+
+# Approximation
+R <- sum(c(1,k)/c(lambda_c,lambda_e))
+Q <- sum(c(1,k)/c(lambda_c,lambda_e)^2)
+k_sum <- R^2/Q
+lambda_sum <- k_sum/R
+```
+
+```{r  approx density, echo = FALSE}
+g <- ggplot(VV,aes(x=VV))+ geom_histogram(aes(y = ..density..),bins = 100) + geom_density(col='red',size=1)
+g <- g+ stat_function(fun = dgamma,
+                args = list(shape = k_sum,
+                            rate = lambda_sum),
+                col = "#1b98e0",
+                size = 1)
+
+g
+```
+
+```{r approx repat, echo=FALSE}
+g <- ggplot(VV,aes(x=VV))+ stat_ecdf(geom = "step") 
+g <- g+ stat_function(fun = pgamma,
+                args = list(shape = k_sum,
+                            rate = lambda_sum),
+                col = "#1b98e0",
+                size = 1)
+
+g
+```
+
+
+
+### Fonctions de vraisemblance.
+
+
+
