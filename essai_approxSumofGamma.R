@@ -1,6 +1,6 @@
 rm(list=ls())
-#library(e1071)
 library(ggplot2)
+library(emg)
 ##################################################
 ################ Illustration de l'approx de somme de Gamma
 ###################################################

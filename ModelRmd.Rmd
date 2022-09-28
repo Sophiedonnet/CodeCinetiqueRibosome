@@ -1,0 +1,193 @@
+---
+title: "Modelisation de la Cinétique des Protéines"
+author: "Sophie Donnet"
+date: "2022-09-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source('functionsEMG.R')
+library(dplyr)
+library(emg)
+library(ggplot2)
+```
+
+## 1. Contexte
+
+On s'intéresse à des images composées de points verts et rouges, chaque point correspondant à un bout précis de l'ADN. 
+Quand ces bouts d'ADN ont été lus, la particule s'éteint. 
+Cependant, ces particuliers s'éteignent aussi même sans avoir été lus (parce que éclairés trop longtemps par exemple). 
+On note $i$ un bout d'ARN représenté par un point vert et un point rouge. Soit $n$ leur nombre. 
+Après traitement d'image, on peut observer sur un intervalle de temps donné $[T_0, T]$, les instants de mort $$(T_i^R, T^V_i)_{i=1,\dots n}.$$
+Deux processus de morts sont à l'oeuvre et se cumulent:
+
+  -   Mort naturelle (dûe à la durée de l'éclairage)
+  
+  -   Mort par lecture
+
+Pour toute entité $i$, soit $U_i^{R}$ l'instant de mort naturelle de la particule $R$ (idem pour $V$) et soit $V_i^{R}$ sa mort par lecture.
+
+Alors
+
+```{=tex}
+\begin{aligned}
+T_i^{R} &= \min(U_i^{R},V_i^R)\\
+T_i^{V} &= \min(U_i^{V},V_i^V)
+\end{aligned}
+```
+De plus, par lecture le long du ribosome, la verte s'éteint avant la rouge.
+
+$$ V_i^R > V_i^V$$
+
+## 2. Données
+
+On observe deux types de données.
+
+   -Expérience 1 : données de contrôle permettent d'observer le phénomène de mort naturelle $(T_i^{C})_{i=1, \dots,n_C}$.
+
+   -Expérience 2 : expérience de lecture $(T_i^{R}, T_i^V)_{i=1, \dots,n}$.
+
+## Le modèle 
+
+### les 2 couleurs en même temps
+
+$$
+\left\{
+\begin{array}{cclcl}
+U_i^R &\sim&   \mathcal{F}(\theta_{N}) &=& \Gamma(\alpha_N,\beta_N)\\
+U_i^V &\sim&   \mathcal{F}(\theta_{N}) &=& \Gamma(\alpha_N,\beta_N) \\
+V_i^V  &\sim&    \mathcal{F}(\theta_{L}) &=& \mathcal{E}(\lambda_c) + \Gamma(k, \lambda_e)  \\
+V_i^R  &\sim&  V_i^V + \mathcal{F}(\nu_{L}) &=& V_i^V + \Gamma(k', \lambda_e)  \\
+T_i^{R} &=&  \min(U_i^{R},V_i^R)\\
+T_i^{V} &=& \min(U_i^{V},V_i^V)
+\end{array}
+\right.
+$$
+
+$\alpha_N$ et $\beta_N$ sont les paramètres de mort spontanée. $\lambda_c$ représente le temps pour que la particule de rejoindre la protéine. $k$ est le nombre de codons. $\lambda_e$ est le paramètre de lecture pour chaque codon . $k'$ est le nombre de codons entre le début et la fin de la séquence.
+
+
+
+### Si on considère couleur par couleur
+
+On enlève l'exposant $R$ et $V$. 
+
+Par ailleurs,  on remplace  $\mathcal{E}(\lambda_c) + \Gamma(k, \lambda_e)$  par une *Exponentially modified Gaussien* dont la densité est encodée sour R dans le package `emg`. 
+
+
+$$
+\left\{
+\begin{array}{cclcl}
+U_i  &\sim&  \Gamma(\alpha_N,\beta_N)\\
+V_i  &\sim&   \mathcal{E}(\lambda_c) + \mathcal{N}(\mu, \sigma) \quad \mbox{ avec } \mu=\frac{k}{\lambda_e}  \quad \mbox{ et } \quad \sigma^2 =  \frac{k}{\lambda_e^2}\\
+T_i &=&  \min(U_i,V_i)\\
+\end{array}
+\right.
+$$
+On choisit les valeurs suivantes: 
+
+```{r param,eval = TRUE, echo = FALSE}
+#------------------- Params of natural death 
+mu_ND_V <- 70 # natural death 
+#sd_ND_V <-400
+#theta_ND <- transfo_Gamma_Param(mu_ND_V,sd_ND_V)
+theta_ND <- c(1,1/mu_ND_V)
+#------------------- Params of ADN reading
+lambda_e <- 1/3
+lambda_c <- 1/3
+k <- 16
+#------------------- Params of Quick death
+pi_QD <-0.1 # probability of quick death
+theta_QD <- transfo_Gamma_Param(10,10)
+```
+
+On choisit les valeurs suivantes
+
+  - $\alpha_N=$  `r  theta_ND[1]`,  $\beta_N=$  `r  theta_ND[2]`
+  - $\frac{1}{\lambda_e}=$ `r 1/lambda_e`
+  - $\frac{1}{\lambda_c}=$ `r 1/lambda_e`
+  - $k=$ `r k`
+  
+
+
+```{r compute densities, eval=TRUE, echo = FALSE}
+delta = 0
+nbCurves <- 7
+len_abs <- 1000
+x <- seq(0,200,length = len_abs )
+P <- as.data.frame(rep(x,nbCurves)); names(P)='time'
+P$density<- c(dgamma(x,theta_ND[1],theta_ND[2]),
+              dexp(x,lambda_c),
+              dgamma(x,k,lambda_e), 
+              demg(x,lambda_c,mu = k/lambda_e + delta,sigma = sqrt(k/lambda_e^2)),
+              dminGammaEMGaussian(x,lambda_c,mu = k/lambda_e + delta,sigma = sqrt(k/lambda_e^2),theta=theta_ND),
+              dgamma(x,theta_QD[1],theta_QD[2]),
+              dOurModel(x,lambda_c,k,lambda_e,theta_ND,delta,pi_QD,theta_QD))
+
+P$Curves = rep(c('0.Natural Death',
+                 '1. Arrival Time',
+                 '2. Reading k codons',
+                 '3. Sum Arrival + reading',
+                 '4. min(ND,Reading)',
+                 '5. Quick Death',
+                 '6. Final model'
+                 ),each=len_abs)
+```
+
+
+On peut alors tracer les densités différents phénomènes.
+
+**Phénomène  de lecture**
+
+```{r plot densities, eval=TRUE, echo = FALSE}
+Ptemp <- P %>% filter(Curves %in% c('1. Arrival Time','2. Reading k codons','3. Sum Arrival + reading'))
+ggplot(data = Ptemp, aes(x=time,y=density,colour=Curves))+ geom_line(size=1.1)    
+```
+
+  - La courbe rouge correspond au phénomène d'arrivée sur le lieu de lecture (paramètre $\lambda_c$)
+  - La courbe verte correspond au phénomène de elcture des $k$ codons  (Gamma remplacée par la gaussienne)
+  - La courbe bleue est la somme des 2 temps. 
+  
+**Phénomène  de mort naturelle et lecture (min des deux)**
+
+```{r plot densities 2, eval=TRUE, echo = FALSE}
+Ptemp <- P %>% filter(Curves %in% c('0.Natural Death','3. Sum Arrival + reading','4. min(ND,Reading)')) 
+ggplot(data = Ptemp, aes(x=time,y=density,colour=Curves))+ geom_line(size=1.1)     
+```
+
+On retrouve bien la bosse du début. 
+
+
+**Phénomène  de mort subite + phénomène précédent**
+
+On peut ajouter un phénomène  de mort subite. On dit qu'une partie $\pi_{QD}$ va mourir tout de suite et que l'autre proportion va subir le phénomène précédent. 
+
+Dans ce cas 
+$$T_i \sim \pi_{QD} \Gamma(\alpha_{QD},\beta_{QD}) + (1-\pi_{QD})   \min(\Gamma(\alpha_N,\beta_N),EMG(\lambda_c, \mu,\sigma))$$
+
+où $QD$ est pour "Quick Death". 
+
+On choisit les valeurs suivantes:
+  
+  -  $\pi_{QD}=$  `r pi_QD`
+  - $\alpha_{QD}=$ `r theta_QD[1]`
+  - $\beta_{QD}=$ `r theta_QD[2]`
+  
+
+```{r plot densities 3, eval=TRUE, echo = FALSE}
+Ptemp <- P %>% filter(Curves %in% c('4. min(ND,Reading)',
+                                    '6. Final model')) 
+ggplot(data = Ptemp, aes(x=time,y=density,colour=Curves))+ geom_line(size=1.1)+ggtitle('With possible Quick Death')     
+```
+
+Ca va augmenter l'effet de la première bosse. 
+
+
+### Conclusion
+
+Avec le modèle proposé on retrouve cette histoire de première bosse (même sans l'effet de Quick death). 
+Maintenant, il faut retrouver les paramètres à partir de vos données! 
+
+
+ 

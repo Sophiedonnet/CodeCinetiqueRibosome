@@ -107,20 +107,6 @@ curve(dens_TR(x,theta_L,nu_L,theta_N),add=TRUE,col='red')
 #################################################
 
 
-estim_param_Gamma <- function(X){
-  EX <- mean(X)
-  VX <-var(X)
-  alpha_hat <- EX^2/VX
-  beta_hat <- alpha_hat/EX
-  
-  #alpha_hat = 4/skewness(X)^2
-  #Delta_hat = EX - sdX*sqrt(alpha_hat)
-  #beta_hat  = sd(X)^2/(EX - Delta_hat)
-
-  
-  return(c(alpha_hat,beta_hat))
-}
-
 
 #-----------------------------------  ESTIM alpha_N, beta_N---- 
 theta_N_hat<- estim_param_Gamma(TC)
