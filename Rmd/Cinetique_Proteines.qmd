@@ -31,15 +31,16 @@ Pour toute entité $i$, soit $U_i^{R}$ l'instant de mort naturelle de la particu
 
 Alors
 
-```{=tex}
 \begin{aligned}
 T_i^{R} &= \min(U_i^{R},V_i^R)\\
 T_i^{V} &= \min(U_i^{V},V_i^V)
 \end{aligned}
-```
+
+
+
 De plus, par lecture le long du ribosome, la verte s'éteint avant la rouge.
 
-$$ V_i^R > V_i^V$$
+$$ V_i^R > V_i^V$$ 
 
 ## Données
 
@@ -74,7 +75,8 @@ $$
 \begin{array}{ccl}
 T_i^{C} &\sim& \Gamma(\alpha_N, \beta_N)
 \end{array}
-$$
+$$ 
+
 
 Par conséquent, les paramètres $\alpha_N$ et $\beta_N$ peuvent être estimés par les estimateurs des moments.
 
@@ -90,6 +92,7 @@ On estime $\lambda_e$ et $\lambda_c$ en maximisant la vraisemblance.
 
 $$(\widehat{\lambda_e}, \widehat{\lambda_c}) = \arg\max \log \mathcal{L} \left((T_i^R,T_i^V)_{i=1,\dots,n}; \widehat{\theta}_N,\lambda_e,\lambda_c\right)
 $$
+
 
 Les temps $T_i^R,T_i^V$ ne sont pas la réalisation de variables aléatoires indépendantes. Cependant leur loi jointe est difficile à calculer. Nous proposons de modifier le critère de la façon suivante:
 
@@ -114,7 +117,8 @@ $$V^V \sim \mathcal{E}(\lambda_c)+ \Gamma(k,\lambda_e) = \Gamma(1,\lambda_c)+ \G
 
 Cette loi n'a pas de densité explicite mais comme somme de loi Gamma on peut l'approcher la façon suivante:
 
-$$ \Gamma(1,\lambda_e)+ \Gamma(k,\lambda_c) \approx \Gamma(k_L,\lambda_L)$$ avec
+$$ \Gamma(1,\lambda_e)+ \Gamma(k,\lambda_c) \approx \Gamma(k_L,\lambda_L)$$ 
+avec 
 
 $$
 \begin{array}{cclccl}
@@ -122,7 +126,8 @@ R &=& \frac{1}{\lambda_c} + \frac{k}{\lambda_e}, &
 Q &=& \frac{1}{\lambda_c^2} + \frac{k}{\lambda_e^2}\\
 k_L &=& \frac{R^2}{Q},& \lambda_L &=&\frac{k_L}{R}
 \end{array}
-$$
+$$ 
+
 
 ### Illustration de l'approximation de la somme de 2 lois Gamma par une loi Gamma
 
@@ -167,4 +172,9 @@ g <- g+ stat_function(fun = pgamma,
 g
 ```
 
+
+
 ### Fonctions de vraisemblance.
+
+
+
