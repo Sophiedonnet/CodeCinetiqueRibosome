@@ -21,7 +21,7 @@ lambda_e <- 1/3
 lambda_c <- 1/3
 k <- 16
 kprime <- 30
-delta = 0
+delta <- 0
 
 #------------------- Params of Quick death
 pi_QD <-0.1 # probability of quick death
