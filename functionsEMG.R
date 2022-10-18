@@ -13,7 +13,7 @@ transfo_Gamma_Param <- function(mu,sigma){
 #-----------------------------------------------------------------
 
 # TV_LD ~ min( UV,VV) with UV ~ Gamma(theta[1], theta[2]), VV ~ Exp(lambda) + N(mu,sigma)   
-dminGammaEMGaussian <- function(x,lambda,mu,sigma,theta){
+dminGammaEMGaussian <- function(x,lambda,mu,sigma,theta,log = FALSE){
  
   if(length(theta)==1){theta=c(1,theta)}
   
@@ -31,6 +31,7 @@ dminGammaEMGaussian <- function(x,lambda,mu,sigma,theta){
   F2z <- pgamma(x,theta[1],theta[2])
   f2z <- dgamma(x,theta[1],theta[2])
   y <- f1z*(1-F2z) + f2z*(1-F1z)
+  if(log){y <- log(y)}
   return(y)
 }
 
@@ -180,14 +181,14 @@ log_lik_withoutQD <- function(log_param,data=list()){
   if (!is.null(data$T_Exp_V)){
     mu_V <- k/lambda_e
     sigma_V <- sqrt(k)/lambda_e
-    U3 <- dminGammaEMGaussian(data$T_Exp_V, lambda = lambda_c,mu = mu_V,sigma = sigma_V,c(1,lambda_ND_V))
-    d <- d + sum(log(U3)) }
+    U3 <- dminGammaEMGaussian(data$T_Exp_V, lambda = lambda_c,mu = mu_V,sigma = sigma_V,c(1,lambda_ND_V),log = TRUE)
+    d <- d + sum(U3) }
   
   if (!is.null(data$T_Exp_R)){
     mu_R <- (k+kprime)/lambda_e
     sigma_R <- sqrt(k+kprime)/lambda_e
-    U4 <- dminGammaEMGaussian(data$T_Exp_R, lambda = lambda_c,mu = mu_R,sigma = sigma_R,c(1,lambda_ND_R))
-    d <- d + sum(log(U4)) 
+    U4 <- dminGammaEMGaussian(data$T_Exp_R, lambda = lambda_c,mu = mu_R,sigma = sigma_R,c(1,lambda_ND_R),log = TRUE)
+    d <- d + sum(U4) 
   }
   
   return(d)
@@ -206,39 +207,44 @@ log_lik_withQD <- function(log_param,data=list(),ZV,ZR){
   lambda_e <- exp(log_param[4])
   lambda_QD <- exp(log_param[5])
   pi_QD <- log_param[6]
-  
   k <- data$k
   kprime <- data$kprime
   
- 
-  
-  
   d <- 0 
-  
   if (!is.null(data$T_Contr_V)){
-    d1 <- sum(dexp(data$T_Contr_V, lambda_ND_V,log  = TRUE))
-    d<- d + d1
+    d1 <- dexp(data$T_Contr_V, lambda_ND_V,log  = TRUE)
+    d<- d + sum(d1)
   }
   
   if (!is.null(data$T_Contr_R)){
-    d2 <- sum(dexp(data$T_Contr_R, lambda_ND_R,log  = TRUE))
-    d<- d + d2
+    d2 <- dexp(data$T_Contr_R, lambda_ND_R,log  = TRUE)
+    d<- d + sum(d2)
   }
   
   if (!is.null(data$T_Exp_V)){
     mu_V <- k/lambda_e
     sigma_V <- sqrt(k)/lambda_e
-    U3_NQD <- log(dminGammaEMGaussian(data$T_Exp_V, lambda = lambda_c,mu = mu_V,sigma = sigma_V,c(1,lambda_ND_V)))
-    U3_QD <- dexp(data$T_Exp_V,lambda_QD,log=TRUE)
-    d <- d + sum(ZV*U3_QD + (1-ZV)*U3_NQD)
+    if(sum(ZV==0)>0){
+      U3_NQD <- dminGammaEMGaussian(data$T_Exp_V[ZV==0], lambda = lambda_c,mu = mu_V,sigma = sigma_V,c(1,lambda_ND_V),log = TRUE)
+      d <- d + sum(U3_NQD)
+    }
+    if(sum(ZV==1)>0){
+      U3_QD <- dexp(data$T_Exp_V[ZV==1],lambda_QD,log=TRUE)
+      d <- d + sum(U3_QD)
+    }
   }
   
   if (!is.null(data$T_Exp_R)){
     mu_R <- (k+kprime)/lambda_e
     sigma_R <- sqrt(k+kprime)/lambda_e
-    U4_NQD <- dminGammaEMGaussian(data$T_Exp_R, lambda = lambda_c,mu = mu_R,sigma = sigma_R,c(1,lambda_ND_R))
-    U4_QD <- dexp(data$T_Exp_R,lambda_QD,log=TRUE)
-    d <- d + sum(ZR*U4_QD + (1-ZR)*U4_NQD)
+    if(sum(ZR==0)>0){
+      U4_NQD <- dminGammaEMGaussian(data$T_Exp_R[ZR==0], lambda = lambda_c,mu = mu_R,sigma = sigma_R,c(1,lambda_ND_R),log = TRUE)
+      d <- d + sum(U4_NQD)
+    }
+    if(sum(ZR==1)>0){
+      U4_QD <- dexp(data$T_Exp_R[ZR==1],lambda_QD,log=TRUE)
+      d <- d + sum(U4_QD)
+    }
   } 
   return(d)
 }

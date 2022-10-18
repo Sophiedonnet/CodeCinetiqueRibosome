@@ -1,9 +1,10 @@
 rm(list=ls())
 library(ggplot2)
+library(dplyr)
 library(emg)
 source('functionsEMG.R')
 source('myMCMC.R')
-library(rjags)
+
 
 ##################################################
 ################ Params  for simulation
@@ -26,23 +27,21 @@ delta <- 0
 param_true = c(lambda_ND_V, lambda_ND_R,lambda_c,lambda_e)
 log_param_true <- log(param_true)
 #------------------- Params of Quick death
-#pi_QD <-0.0 # probability of quick death
-#lambda_QD = 1/5; theta_QD <-  c(1,lambda_QD)
-#theta_QD <- transfo_Gamma_Param(10,10)
+pi_QD <-0.2 # probability of quick death
+lambda_QD = 1/5; theta_QD <-  c(1,lambda_QD)
 
 #------------------- Nb d'observations
 n_V <- n_R <- 1000 # expériences
 n_C  <-100 # controle
 
 #------------------ données expérimentales  SIMULATION  exp(lambda_c) + Gamma(k, lambda_e) with  additional Quick death
+#------- Natural death
 T_R_C <- rexp(n_C,1/mu_ND_R)
 T_V_C <- rexp(n_C,1/mu_ND_V)
-
-
 hist(T_R_C,freq = FALSE,nclass = n_V/10,main="Natural Death")  
 hist(T_V_C,freq = FALSE,nclass = n_V/10,main="Natural Death")  
 
-
+#------- Exp with quick death 
 T_Exp_V <- rOurModel(n_V,lambda_c,k,lambda_e,lambda_ND_V,delta,pi_QD=0,theta_QD=1)$Y
 T_Exp_R <- rOurModel(n_R,lambda_c,k+kprime,lambda_e,lambda_ND_R,delta,pi_QD=0,theta_QD=1)$Y
 
@@ -67,29 +66,36 @@ mydata$T_Contr_V = T_V_C
 
 mydata$T_Exp_R <- T_Exp_R
 mydata$T_Exp_V <- T_Exp_V
-#mydata$n_Exp_R <- length(mydata$T_Exp_R)
-#mydata$n_Exp_V <- length(mydata$T_Exp_V)
+mydata$n_Exp_R <- length(mydata$T_Exp_R)
+mydata$n_Exp_V <- length(mydata$T_Exp_V)
 mydata$k = k
 mydata$kprime = kprime
 
 
-#param_init = log(c(lambda_ND_V, lambda_ND_R,lambda_c,lambda_e))
+#param_init = log(c(lambda_ND_V, lambda_ND_R,lambda_c,lambda_e,lambda_QD,piQD))
 log_param_init = c(-1,-1,-2,-1)
-paramsChains = list(nMCMC=50000,rho=c(10,10,10,10))
-paramsChains$nBurnin <- paramsChains$nMCMC/10
-paramsChains$paramsToSample = c(1:4)
-#param_init[3]<- log(lambda_c)
-#param_init[1]<- log(lambda_ND_V)
-#param_init[2]<- log(lambda_ND_R)
+log_param_init[1:4] <- log(param_true[1:4])
+log_param_init[5] = -log(3)
+log_param_init[6] = pi_QD
 
-hyperparams= list(lowerbound=c(-10,-10,-10,-10),upperbound=rep(0,4),a=1,b=1)
+paramsChains = list(nMCMC=1000,rho=rep(10,6))
+paramsChains$paramsToSample = c(5,6)
+paramsChains$nBurnin <- paramsChains$nMCMC/10
+
+hyperparams= list(lowerbound=c(-10,-10,-10,-10,-10),upperbound=rep(0,5),a=1,b=1)
+
 hyperparams$lowerbound[3] <- -log(20)  #lambda_c
 hyperparams$upperbound[3] <- - log(5)
+
 hyperparams$lowerbound[4] <- -log(5) #lambda_e
 hyperparams$upperbound[4] <- -log(1) 
 
+hyperparams$lowerbound[5] <- -log(10) #lambda_QD
+hyperparams$upperbound[5] <- -log(1) 
+
 ####################################################
-myPostSample <- my_mcmc_onechain(data,log_param_init,hyperparams,paramsChains)
+paramsChains$withQD  = TRUE
+myPostSample <- my_mcmc_onechain(mydata,log_param_init,hyperparams,paramsChains)
 #######################################################""""
 
 par(mfrow=c(ceiling(length(paramsChains$paramsToSample)/2),2))
@@ -138,12 +144,12 @@ param_estim <- exp(apply(myPostSample,2,mean))
 
 hist(T_Exp_V,freq=FALSE,nclass =100, main="Without Quick Death Red")  
 lines(density(T_Exp_V))
-curve(dminGammaEMGaussian(x,param_estim[3],mu = k/param_estim[4],sigma = sqrt(k/param_estim[4]^2),theta=c(1,param_estim[1])),add=TRUE,col='green',lwd=2,lty=2,)
-curve(dminGammaEMGaussian(x,param_true[3],mu = k/param_true[4],sigma = sqrt(k/param_true[4]^2),theta=c(1,param_true[1])),add=TRUE,col='green',lwd=2)
+curve(dminGammaEMGaussian(x,param_estim[3],mu = k/param_estim[4],sigma = sqrt(k)/param_estim[4],theta=c(1,param_estim[1])),add=TRUE,col='green',lwd=2,lty=2,)
+curve(dminGammaEMGaussian(x,param_true[3],mu = k/param_true[4],sigma = sqrt(k)/param_true[4]^2,theta=c(1,param_true[1])),add=TRUE,col='green',lwd=2)
 
 
 hist(T_Exp_R,freq=FALSE,nclass =100, main="Without Quick Death Red")  
 lines(density(T_Exp_R))
-curve(dminGammaEMGaussian(x,param_estim[3],mu = (k+kprime)/param_estim[4],sigma = sqrt((k+kprime)/param_estim[4]^2),theta=c(1,param_estim[2])),add=TRUE,col='red',lty=2,lwd=2)
-curve(dminGammaEMGaussian(x,param_true[3],mu = (k+kprime)/param_true[4],sigma = sqrt((k+kprime)/param_true[4]^2),theta=c(1,param_true[2])),add=TRUE,col='red',lwd=2)
+curve(dminGammaEMGaussian(x,param_estim[3],mu = (k+kprime)/param_estim[4],sigma = sqrt(k+kprime)/param_estim[4],theta=c(1,param_estim[2])),add=TRUE,col='red',lty=2,lwd=2)
+curve(dminGammaEMGaussian(x,param_true[3],mu = (k+kprime)/param_true[4],sigma = sqrt(k+kprime)/param_true[4],theta=c(1,param_true[2])),add=TRUE,col='red',lwd=2)
 
