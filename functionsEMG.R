@@ -151,65 +151,77 @@ estim_param_Gamma <- function(X){
 
  
 
+# #----------------- Likelihood (TV, TR)
+# log_lik_withoutQD <- function(log_param,data=list()){
+#   
+#   # log_param: log(lambda_ND_V),log(lambda_ND_R), log(lambda_c),log(lambda_e)
+#   
+#   lambda_ND_V <- exp(log_param[1])
+#   lambda_ND_R <- exp(log_param[2])
+#   lambda_c <- exp(log_param[3])
+#   lambda_e <- exp(log_param[4])
+#   
+#   k <- data$k
+#   kprime <- data$kprime
+#   
+#   d <- 0 
+#   
+#   if (!is.null(data$T_Contr_V)){
+#     d1 <- sum(dexp(data$T_Contr_V, lambda_ND_V,log  = TRUE))
+#     d<- d + d1
+#   }
+#   
+#   
+#   if (!is.null(data$T_Contr_R)){
+#     d2 <- sum(dexp(data$T_Contr_R, lambda_ND_R,log  = TRUE))
+#     d<- d + d2
+#   }
+#   
+#   
+#   if (!is.null(data$T_Exp_V)){
+#     mu_V <- k/lambda_e
+#     sigma_V <- sqrt(k)/lambda_e
+#     U3 <- dminGammaEMGaussian(data$T_Exp_V, lambda = lambda_c,mu = mu_V,sigma = sigma_V,c(1,lambda_ND_V),log = TRUE)
+#     d <- d + sum(U3) }
+#   
+#   if (!is.null(data$T_Exp_R)){
+#     mu_R <- (k+kprime)/lambda_e
+#     sigma_R <- sqrt(k+kprime)/lambda_e
+#     U4 <- dminGammaEMGaussian(data$T_Exp_R, lambda = lambda_c,mu = mu_R,sigma = sigma_R,c(1,lambda_ND_R),log = TRUE)
+#     d <- d + sum(U4) 
+#   }
+#   
+#   return(d)
+#   }
+# 
+
+
 #----------------- Likelihood (TV, TR)
-log_lik_withoutQD <- function(log_param,data=list()){
+log_lik <- function(log_param,data=list(),Z = NULL){
+
+  # log_param: log(lambda_ND_V),log(lambda_ND_R), log(lambda_c),log(lambda_e) [log(lambda_QD) pi_QD]
+
+  k <- data$k
+  kprime <- data$kprime
   
-  # log_param: log(lambda_ND_V),log(lambda_ND_R), log(lambda_c),log(lambda_e)
   
   lambda_ND_V <- exp(log_param[1])
   lambda_ND_R <- exp(log_param[2])
   lambda_c <- exp(log_param[3])
   lambda_e <- exp(log_param[4])
-  
-  k <- data$k
-  kprime <- data$kprime
-  
-  d <- 0 
-  
-  if (!is.null(data$T_Contr_V)){
-    d1 <- sum(dexp(data$T_Contr_V, lambda_ND_V,log  = TRUE))
-    d<- d + d1
+  if (length(log_param) == 6){
+    withQD <- TRUE
+    ZV <- Z$ZV
+    ZR <- Z$ZR 
+    lambda_QD <- exp(log_param[5])
+    pi_QD <- log_param[6]
+  }else{    
+    withQD <- FALSE
+    ZV = rep(0,length(data$T_Exp_V))
+    ZR = rep(0,length(data$T_Exp_R))
   }
   
-  
-  if (!is.null(data$T_Contr_R)){
-    d2 <- sum(dexp(data$T_Contr_R, lambda_ND_R,log  = TRUE))
-    d<- d + d2
-  }
-  
-  
-  if (!is.null(data$T_Exp_V)){
-    mu_V <- k/lambda_e
-    sigma_V <- sqrt(k)/lambda_e
-    U3 <- dminGammaEMGaussian(data$T_Exp_V, lambda = lambda_c,mu = mu_V,sigma = sigma_V,c(1,lambda_ND_V),log = TRUE)
-    d <- d + sum(U3) }
-  
-  if (!is.null(data$T_Exp_R)){
-    mu_R <- (k+kprime)/lambda_e
-    sigma_R <- sqrt(k+kprime)/lambda_e
-    U4 <- dminGammaEMGaussian(data$T_Exp_R, lambda = lambda_c,mu = mu_R,sigma = sigma_R,c(1,lambda_ND_R),log = TRUE)
-    d <- d + sum(U4) 
-  }
-  
-  return(d)
-  }
-
-
-
-#----------------- Likelihood (TV, TR)
-log_lik_withQD <- function(log_param,data=list(),ZV,ZR){
-  
-  # log_param: log(lambda_ND_V),log(lambda_ND_R), log(lambda_c),log(lambda_e)
-  
-  lambda_ND_V <- exp(log_param[1])
-  lambda_ND_R <- exp(log_param[2])
-  lambda_c <- exp(log_param[3])
-  lambda_e <- exp(log_param[4])
-  lambda_QD <- exp(log_param[5])
-  pi_QD <- log_param[6]
-  k <- data$k
-  kprime <- data$kprime
-  
+  ############## compute likelihood 
   d <- 0 
   if (!is.null(data$T_Contr_V)){
     d1 <- dexp(data$T_Contr_V, lambda_ND_V,log  = TRUE)

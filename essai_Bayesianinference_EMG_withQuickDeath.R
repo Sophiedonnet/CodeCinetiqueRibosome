@@ -46,12 +46,12 @@ T_Exp_V <- rOurModel(n_V,lambda_c,k,lambda_e,lambda_ND_V,delta,pi_QD=0,theta_QD=
 T_Exp_R <- rOurModel(n_R,lambda_c,k+kprime,lambda_e,lambda_ND_R,delta,pi_QD=0,theta_QD=1)$Y
 
 par(mfrow=c(1,2))
-hist(T_Exp_V,freq=FALSE,nclass =100, main="Without Quick Death Red")  
+hist(T_Exp_V,freq=FALSE,nclass =100, main="With Quick Death Red")  
 lines(density(T_Exp_V))
 curve(dminGammaEMGaussian(x,param_true[3],mu = k/param_true[4],sigma = sqrt(k/param_true[4]^2),theta=c(1,param_true[1])),add=TRUE,col='green',lwd=2)
 
 
-hist(T_Exp_R,freq=FALSE,nclass =100, main="Without Quick Death Red")  
+hist(T_Exp_R,freq=FALSE,nclass =100, main="With Quick Death Red")  
 lines(density(T_Exp_R))
 curve(dminGammaEMGaussian(x,param_true[3],mu = (k+kprime)/param_true[4],sigma = sqrt((k+kprime)/param_true[4]^2),theta=c(1,param_true[2])),add=TRUE,col='red',lwd=2)
 
