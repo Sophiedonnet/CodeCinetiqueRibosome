@@ -88,7 +88,7 @@ rminGammaEMGamma <- function(n,lambda_c,k,lambda_e,theta_ND,delta = 0){
 #----------Simulation of a sample from  pi_QD Gamma() + (1-pi_QD)*min(Gamma,EMGamma)  
 #----------------------------------------------------------------------------------------------------
 
-rOurModel <- function(n,lambda_c,k,lambda_e,theta_ND,delta=0,pi_QD=0,theta_QD=c(1,1)){
+rOurModel <- function(n,lambda_c,k,lambda_e,theta_ND,pi_QD = 0 ,lambda_QD=1){
   
   
   # x: vector of real number
@@ -96,7 +96,6 @@ rOurModel <- function(n,lambda_c,k,lambda_e,theta_ND,delta=0,pi_QD=0,theta_QD=c(
   # k:  Param of the Gamma. Number of codon
   # lambda_e:  positive real number. Param of the Gamma. Inverse of the mean length of lecture per Codon (élongation)
   # theta_ND:  vector of 2 positive real number. Param of the gamma  distribution representing the natural death
-  # delta : parameter of lag 
   # pi_QD : proportion of particles that will die very quickly
   # lambda_QD: 1/mean of time of quick death phenomenon 
   # output : vector of length n
@@ -105,7 +104,7 @@ rOurModel <- function(n,lambda_c,k,lambda_e,theta_ND,delta=0,pi_QD=0,theta_QD=c(
   if(length(theta_ND)==1){theta_ND=c(1,theta_ND)}
   
   Z_QD <- sample(c(1,0),n,replace=TRUE,prob = c(pi_QD, 1-pi_QD)) 
-  T_QD <- rgamma(n,shape = theta_QD[1], rate = theta_QD[2])
+  T_QD <- rexp(n,lambda_QD)
   T_LD <- rminGammaEMGamma(n,lambda_c,k,lambda_e,theta_ND,delta)
   Y <- Z_QD * T_QD  + (1-Z_QD)*T_LD
   return(list(Y = Y,Z  = Z_QD))
@@ -114,23 +113,20 @@ rOurModel <- function(n,lambda_c,k,lambda_e,theta_ND,delta=0,pi_QD=0,theta_QD=c(
 #---------------------------------------------------------------------------------------------------
 #----------Density of  pi_QD Gamma() + (1-pi_QD)*min(Gamma,EMGamma)  
 #----------------------------------------------------------------------------------------------------
-dOurModel <- function(x,lambda_c,k,lambda_e,theta_ND,delta=0,pi_QD,theta_QD){
+dOurModel <- function(x,lambda_c,k,lambda_e,theta_ND,pi_QD,lambda_QD){
   
   # lambda_c: Param of the exponential distribution for the time to go to the ADN
   # k:  Param of the Gamma. Number of codon
-  # lambda_e:  positive real number. Param of the Gamma. Inverse of the mean length of lecture per Codon (élongation)
+  # lambda_e:  positive real number. Param of the  Exp. Inverse of the mean length of lecture per Codon (élongation)
   # theta_ND:  vector of 2 positive real numbers. Param of the gamma  distribution representing the natural death
-  # delta : parameter of lag 
   # pi_QD : proportion of particles that will die very quickly
-  # theta_QD: vector of 2 positive real numbers. Param of the gamma  distribution representing the quick death
+  # lambda_QD: positive real number. Param of the  Exp  distribution representing the quick death
   # output : vector of same length as x
   
   if (length(theta_ND)==1){theta_ND = c(1,theta_ND)}
-  if (length(theta_QD)==1){theta_QD = c(1,theta_QD)}
-  d1 <- dgamma(x,shape = theta_QD[1], rate = theta_QD[2])
-  #d1 <- dexp(x,theta_QD[2])
-  d2 <- dminGammaEMGaussian(x,lambda_c,mu=k/lambda_e + delta,sigma=sqrt(k)/lambda_e,theta = theta_ND)
-  return(d1*pi_QD + (1-pi_QD)*d2)
+  dQD <- dgamma(x,lambda_QD)
+  dNQD <- dminGammaEMGaussian(x,lambda_c,mu=k/lambda_e ,sigma=sqrt(k)/lambda_e,theta = theta_ND)
+  return(dQD*pi_QD + (1-pi_QD)*dNQD)
 } 
 
 # 
@@ -197,7 +193,7 @@ estim_param_Gamma <- function(X){
 
 
 #----------------- Likelihood (TV, TR)
-log_lik <- function(log_param,data=list(),Z = NULL){
+log_lik <- function(log_param,data,Z = NULL){
 
   # log_param: log(lambda_ND_V),log(lambda_ND_R), log(lambda_c),log(lambda_e) [log(lambda_QD) pi_QD]
 
@@ -213,16 +209,20 @@ log_lik <- function(log_param,data=list(),Z = NULL){
     withQD <- TRUE
     ZV <- Z$ZV
     ZR <- Z$ZR 
+    SV <- sum(ZV);
+    SR <- sum(ZR);
     lambda_QD <- exp(log_param[5])
     pi_QD <- log_param[6]
+    d <- (SV+SR)*log(pi_QD) + (data$n_Exp_R + data$n_Exp_V - SV - SR)*log(1-pi_QD) 
   }else{    
     withQD <- FALSE
     ZV = rep(0,length(data$T_Exp_V))
     ZR = rep(0,length(data$T_Exp_R))
+    d <- 0 
   }
   
   ############## compute likelihood 
-  d <- 0 
+
   if (!is.null(data$T_Contr_V)){
     d1 <- dexp(data$T_Contr_V, lambda_ND_V,log  = TRUE)
     d<- d + sum(d1)
@@ -239,6 +239,7 @@ log_lik <- function(log_param,data=list(),Z = NULL){
     if(sum(ZV==0)>0){
       U3_NQD <- dminGammaEMGaussian(data$T_Exp_V[ZV==0], lambda = lambda_c,mu = mu_V,sigma = sigma_V,c(1,lambda_ND_V),log = TRUE)
       d <- d + sum(U3_NQD)
+      
     }
     if(sum(ZV==1)>0){
       U3_QD <- dexp(data$T_Exp_V[ZV==1],lambda_QD,log=TRUE)

@@ -7,12 +7,16 @@ my_mcmc_onechain  = function(data,log_param_init,
   #--------------------------------------
   withQD <- paramsChains$withQD
   if(is.null(withQD)){withQD  = FALSE}
-  q <- length(log_param_init)
   n_Exp_V <- length(data$T_Exp_V)
   n_Exp_R <- length(data$T_Exp_R)
   n_Exp <- n_Exp_V+n_Exp_R
   #----------- checks
-  if(!withQD){log_param_init <- log_param_init[1:4]}
+  if(!withQD){
+    log_param_init <- log_param_init[1:4]
+    hyperparams$lowerbound <-hyperparams$lowerbound[1:4]
+    hyperparams$upperbound <-hyperparams$upperbound[1:4]
+  }
+  q <- length(log_param_init)
   if(withQD & (q!=6)){stop('With QD requires 6 parameters')}
   
   checkLB <- length(hyperparams$lowerbound)== 4 + withQD
@@ -28,8 +32,9 @@ my_mcmc_onechain  = function(data,log_param_init,
   myPostSample <- matrix(0,paramsChains$nMCMC-paramsChains$nBurnin,q) 
   log_param <- log_param_init
   
+ 
   if(withQD){
-    pi_QD <- log_param_init[6]
+    pi_QD <- log_param[6]
     Z <- list()
     Z$ZR <- dbinom(n_Exp_R,1,pi_QD)
     Z$ZV <- dbinom(n_Exp_V,1,pi_QD)
@@ -49,26 +54,26 @@ my_mcmc_onechain  = function(data,log_param_init,
     #-------------------------------------------------------------
     # log(lambda_ND_R, lambda_ND_V, lambda_c,lambda_e,log lambda_QD 
     #-------------------------------------------------------------
-    log_param_c <- log_param 
-    w = sample(whereRW,1) 
-    s <- sample(c(0.01,0.1,1),1)*paramsChains$rho
-    log_param_c[w] <- log_param[w] + rnorm(1,0,s[w])
+    if(length(whereRW>0)){
+      log_param_c <- log_param 
+      w = sample(whereRW,1) 
+      s <- sample(c(0.01,0.1,1),1)*paramsChains$rho
+      log_param_c[w] <- log_param[w] + rnorm(1,0,s[w])
+      logprior_c <- sum(dunif(log_param_c[1:(4+withQD)], hyperparams$lowerbound[1:(4+withQD)], hyperparams$upperbound[1:(4+withQD)],log = TRUE))
+      if(withQD){
+        logprior_c <- logprior_c + dbeta(log_param_c[6],hyperparams$a,hyperparams$b,log = TRUE)
+      }
     
-    
-    logprior_c <- sum(dunif(log_param_c[1:(4+withQD)], hyperparams$lowerbound[1:(4+withQD)], hyperparams$upperbound[1:(4+withQD)],log = TRUE))
-    if(withQD){
-      logprior_c <- logprior_c + dbeta(log_param_c[6],hyperparams$a,hyperparams$b,log = TRUE)
-    }
-    
-    if(logprior_c!=-Inf){
-      LL_c <- log_lik(log_param_c,data=mydata,Z)
-      alpha <- LL_c + logprior_c - LL - logprior
-      if(is.na(LL_c)){browser()}
+      if(logprior_c!=-Inf){
+        LL_c <- log_lik(log_param_c,data=mydata,Z)
+        alpha <- LL_c + logprior_c - LL - logprior
+        if(is.na(LL_c)){browser()}
       #if(LL_c==Inf){LL_c  = -Inf}
-      if (log(runif(1))<alpha){
-        log_param <- log_param_c
-        LL <- LL_c
-        logprior <-  logprior_c 
+        if (log(runif(1))<alpha){
+          log_param <- log_param_c
+          LL <- LL_c
+          logprior <-  logprior_c 
+        }
       }
     }
     
@@ -78,7 +83,7 @@ my_mcmc_onechain  = function(data,log_param_init,
     #-------------------------------------------------------------
     if(withQD){
       
-      Z <- sample_Z_QD(log_param,data,pi_QD)
+      Z <- sample_Z_QD(log_param,data)
       S <- sum(sapply(Z, sum))
       log_param[6] = rbeta(1,hyperparams$a+S, hyperparams$b+ n_Exp - S)
     }
@@ -126,7 +131,7 @@ whereToUpdate = function(vect){
 }
 
 #================================================================
-sample_Z_QD <- function(log_param,data,pi_QD){
+sample_Z_QD <- function(log_param,data){
   
   lambda_ND_V <- exp(log_param[1])
   lambda_ND_R <- exp(log_param[2])
