@@ -100,7 +100,7 @@ rOurModel <- function(n,lambda_c,k,lambda_e,theta_ND,pi_QD = 0 ,lambda_QD=1){
   # lambda_QD: 1/mean of time of quick death phenomenon 
   # output : vector of length n
   
-  if(length(theta_QD)==1){theta_QD=c(1,theta_QD)}
+
   if(length(theta_ND)==1){theta_ND=c(1,theta_ND)}
   
   Z_QD <- sample(c(1,0),n,replace=TRUE,prob = c(pi_QD, 1-pi_QD)) 
@@ -113,9 +113,9 @@ rOurModel <- function(n,lambda_c,k,lambda_e,theta_ND,pi_QD = 0 ,lambda_QD=1){
 #---------------------------------------------------------------------------------------------------
 #----------Density of  pi_QD Gamma() + (1-pi_QD)*min(Gamma,EMGamma)  
 #----------------------------------------------------------------------------------------------------
-dOurModel <- function(x,lambda_c,k,lambda_e,theta_ND,pi_QD,lambda_QD){
+dOurModel <- function(x,param,k,kprime,color='red'){
   
-  # lambda_c: Param of the exponential distribution for the time to go to the ADN
+  # param = (lambda_ND,lambda_c: Param of the exponential distribution for the time to go to the ADN
   # k:  Param of the Gamma. Number of codon
   # lambda_e:  positive real number. Param of the  Exp. Inverse of the mean length of lecture per Codon (élongation)
   # theta_ND:  vector of 2 positive real numbers. Param of the gamma  distribution representing the natural death
@@ -123,9 +123,18 @@ dOurModel <- function(x,lambda_c,k,lambda_e,theta_ND,pi_QD,lambda_QD){
   # lambda_QD: positive real number. Param of the  Exp  distribution representing the quick death
   # output : vector of same length as x
   
-  if (length(theta_ND)==1){theta_ND = c(1,theta_ND)}
-  dQD <- dgamma(x,lambda_QD)
-  dNQD <- dminGammaEMGaussian(x,lambda_c,mu=k/lambda_e ,sigma=sqrt(k)/lambda_e,theta = theta_ND)
+  lambda_ND_V <- param[1]
+  lambda_ND_R <- param[2]
+  lambda_c <- param[3]
+  lambda_e <- param[4]
+  lambda_QD <- param[5]
+  pi_QD <- param[6]
+  
+  lambda_ND <- ifelse(color=='red',lambda_ND_R,lambda_ND_V)
+  nbcodons <- ifelse(color=='red',k+kprime,k)
+  
+  dQD <- dexp(x,lambda_QD)
+  dNQD <- dminGammaEMGaussian(x,lambda_c,mu= nbcodons/lambda_e ,sigma=sqrt(nbcodons)/lambda_e,theta =c(1,lambda_ND))
   return(dQD*pi_QD + (1-pi_QD)*dNQD)
 } 
 
@@ -193,36 +202,31 @@ estim_param_Gamma <- function(X){
 
 
 #----------------- Likelihood (TV, TR)
-log_lik <- function(log_param,data,Z = NULL){
+log_lik <- function(log_param,data,Z = NULL,withQD){
 
   # log_param: log(lambda_ND_V),log(lambda_ND_R), log(lambda_c),log(lambda_e) [log(lambda_QD) pi_QD]
 
   k <- data$k
   kprime <- data$kprime
-  
-  
   lambda_ND_V <- exp(log_param[1])
   lambda_ND_R <- exp(log_param[2])
   lambda_c <- exp(log_param[3])
   lambda_e <- exp(log_param[4])
-  if (length(log_param) == 6){
-    withQD <- TRUE
+  if (withQD){
     ZV <- Z$ZV
     ZR <- Z$ZR 
-    SV <- sum(ZV);
-    SR <- sum(ZR);
     lambda_QD <- exp(log_param[5])
-    pi_QD <- log_param[6]
-    d <- (SV+SR)*log(pi_QD) + (data$n_Exp_R + data$n_Exp_V - SV - SR)*log(1-pi_QD) 
-  }else{    
-    withQD <- FALSE
+    #SV <- sum(ZV);
+    #SR <- sum(ZR);
+    #pi_QD <- log_param[6]
+    #d <- (SV+SR)*log(pi_QD) + (data$n_Exp_R + data$n_Exp_V - SV - SR)*log(1-pi_QD) 
+  }else{   
     ZV = rep(0,length(data$T_Exp_V))
     ZR = rep(0,length(data$T_Exp_R))
-    d <- 0 
   }
-  
-  ############## compute likelihood 
 
+  d <- 0 
+  ############## compute likelihood 
   if (!is.null(data$T_Contr_V)){
     d1 <- dexp(data$T_Contr_V, lambda_ND_V,log  = TRUE)
     d<- d + sum(d1)
@@ -234,24 +238,23 @@ log_lik <- function(log_param,data,Z = NULL){
   }
   
   if (!is.null(data$T_Exp_V)){
-    mu_V <- k/lambda_e
-    sigma_V <- sqrt(k)/lambda_e
+    
     if(sum(ZV==0)>0){
-      U3_NQD <- dminGammaEMGaussian(data$T_Exp_V[ZV==0], lambda = lambda_c,mu = mu_V,sigma = sigma_V,c(1,lambda_ND_V),log = TRUE)
+       mu_V <- k/lambda_e
+      sigma_V <- sqrt(k)/lambda_e
+      U3_NQD <- dminGammaEMGaussian(data$T_Exp_V[ZV==0], lambda = lambda_c,mu = mu_V,sigma = sigma_V,lambda_ND_V,log = TRUE)
       d <- d + sum(U3_NQD)
-      
     }
     if(sum(ZV==1)>0){
       U3_QD <- dexp(data$T_Exp_V[ZV==1],lambda_QD,log=TRUE)
       d <- d + sum(U3_QD)
     }
   }
-  
   if (!is.null(data$T_Exp_R)){
-    mu_R <- (k+kprime)/lambda_e
-    sigma_R <- sqrt(k+kprime)/lambda_e
     if(sum(ZR==0)>0){
-      U4_NQD <- dminGammaEMGaussian(data$T_Exp_R[ZR==0], lambda = lambda_c,mu = mu_R,sigma = sigma_R,c(1,lambda_ND_R),log = TRUE)
+      mu_R <- (k+kprime)/lambda_e
+      sigma_R <- sqrt(k+kprime)/lambda_e
+      U4_NQD <- dminGammaEMGaussian(data$T_Exp_R[ZR==0], lambda = lambda_c,mu = mu_R,sigma = sigma_R,lambda_ND_R,log = TRUE)
       d <- d + sum(U4_NQD)
     }
     if(sum(ZR==1)>0){
@@ -262,55 +265,46 @@ log_lik <- function(log_param,data,Z = NULL){
   return(d)
 }
 
+#========================================================================
+log_prior = function(log_param,hyperparams,withQD){
+  d <- sum(dunif(log_param[1:(4+withQD)], hyperparams$lowerbound[1:(4+withQD)], hyperparams$upperbound[1:(4+withQD)],log = TRUE))
+  #if(withQD){
+  #  d <- d + dbeta(log_param[6],hyperparams$a,hyperparams$b,log = TRUE)
+  #}
+  return(d)
+}
 
-
-#----------------------------------------------------------------------
-# 
-# log_likelihood_ourModel_onecolor <- function(param,theta_ND,k,Times){
-#   
-#   # param: log(lambda_c),log(lambda_e), qnorm(pi_QD) , log(theta_QD) (of length 2) 
-#   
-#   lambda_c <- exp(param[1])
-#   lambda_e <- exp(param[2])
-#   pi_QD <- pnorm(param[3])
-#   theta_QD <- exp(param[4:5])
-#   
-#   LT <- dOurModel(Times,lambda_c,k,lambda_e,theta_ND,delta=0,pi_QD,theta_QD)
-#   return(- sum(LT))
-# }
-
-#----------------------------------------------------------------------
-
-# log_likelihood_ourModel_allcolors <- function(log_param,k,kprime,data){
-#   
-#   # param: log(lambda_c),log(lambda_e), qnorm(pi_QD) , log(theta_QD) (of length 2) 
-#   # theta_ND  : params of natural death for each color (G then R)
-#   lambda_c <- exp(param[3]) 
-#   lambda_e <- exp(param[4])
-# #  pi_QD <- pnorm(param[3])
-# #  theta_QD <- exp(param[4:5])
-#   
-#   theta_ND_V <- c(1,log_param[1])
-#   LTV <- dOurModel(data$TV,lambda_c,k         ,lambda_e,c(1,log_param[1]),delta=0,pi_QD = 0,theta_QD)
-#   LTR <- dOurModel(data$TR,lambda_c,k + kprime,lambda_e,theta_ND[3:4],delta=0,pi_QD,theta_QD)
-#   
-#   return(- sum(LTV) - sum(LTR))
-# }
-
-#------------------------------------------------------------------------- 
+#========================================================================
 # plot Curves
+#========================================================================
 
-computationToPlotCurves <- function(x,lambda_ND,lambda_c,lambda_e,nbCodons,pi_QD = NULL,theta_QD= NULL){
+computationToPlotCurves <- function(x,param,k,kprime){
   
-  theta_ND <- c(1,lambda_ND)
-  if (is.null(theta_QD)){nbCurves <- 5}else{nbCurves <- 7}
+  lambda_ND_V <- param[1]
+  lambda_ND_R <- param[2]
+  lambda_c <- param[3]
+  lambda_e <- param[4]
+  lambda_QD <- param[5]
+  pi_QD <- param[6]
+  
+  
+  if (pi_QD== 0){nbCurves <- 5*2}else{nbCurves <- 7*2}
+  
   P <- as.data.frame(rep(x,nbCurves)); names(P)='time'
+  P$Color_Part <- rep(c('Green','Red'),each=nrow(P)/2)
   
-  myDensity<- c(dgamma(x,theta_ND[1],theta_ND[2]),
+  myDensity_V<- c(dexp(x,lambda_ND_V),
               dexp(x,lambda_c),
-              dgamma(x,nbCodons,lambda_e), 
-              demg(x,lambda_c,mu = nbCodons/lambda_e + delta,sigma = sqrt(nbCodons)/lambda_e),
-              dminGammaEMGaussian(x,lambda_c,mu = nbCodons/lambda_e + delta,sigma = sqrt(nbCodons)/lambda_e,theta=c(1,lambda_ND)))
+              dgamma(x,k,lambda_e), 
+              demg(x,lambda_c,mu = k/lambda_e,sigma = sqrt(k)/lambda_e),
+              dminGammaEMGaussian(x,lambda_c,mu = k/lambda_e,sigma = sqrt(k)/lambda_e,theta=c(1,lambda_ND_V)))
+  
+  myDensity_R<- c(dexp(x,lambda_ND_R),
+                  dexp(x,lambda_c),
+                  dgamma(x,k,lambda_e), 
+                  demg(x,lambda_c,mu = (k+kprime)/lambda_e,sigma = sqrt(k+kprime)/lambda_e),
+                  dminGammaEMGaussian(x,lambda_c,mu = (k+kprime)/lambda_e,sigma = sqrt(k+kprime)/lambda_e,theta=c(1,lambda_ND_R)))
+  
   
   myCurves = rep(c('0.Natural Death',
                    '1. Arrival Time',
@@ -318,15 +312,17 @@ computationToPlotCurves <- function(x,lambda_ND,lambda_c,lambda_e,nbCodons,pi_QD
                    '3. Sum Arrival + reading',
                    '4. min(ND,Reading)'),each=length(x))
                  
-  if(!is.null(theta_QD)){
-    mydensity  <- c(mydensity ,dgamma(x,theta_QD[1],theta_QD[2]),
-                    dOurModel(x,lambda_c,nbCodons,lambda_e,theta_ND,delta,pi_QD,theta_QD))
+  if(pi_QD>0){
+    myDensity_V  <- c(myDensity_V ,dexp(x,lambda_QD),
+                    dOurModel(x,param,k,kprime,color='green'))
+    myDensity_R  <- c(myDensity_R ,dexp(x,lambda_QD),
+                      dOurModel(x,param,k,kprime,color='red'))
     myCurves <- c(myCurves,rep(c('5. Quick Death','6. Final model'),each=length(x)))
-    
   }
   
-  P$density <- myDensity
-  P$Curves <- myCurves
+  P$density <- c(myDensity_V,myDensity_R)
+  P$Curves <- as.factor(rep(myCurves,2))
+  P$Color_Part <- as.factor(P$Color_Part)
   return(P)
               
 }

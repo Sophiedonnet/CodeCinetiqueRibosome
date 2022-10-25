@@ -4,47 +4,40 @@ my_mcmc_onechain  = function(data,log_param_init,
 
   #param_init : log(lambda_ND_R, lambda_ND_V, lambda_c,lambda_e,[log lambda_QD,pi_DQ])
   
+   
   #--------------------------------------
   withQD <- paramsChains$withQD
   if(is.null(withQD)){withQD  = FALSE}
   n_Exp_V <- length(data$T_Exp_V)
   n_Exp_R <- length(data$T_Exp_R)
   n_Exp <- n_Exp_V+n_Exp_R
+  if(n_Exp==0){withQD = FALSE; withExp = FALSE}
   #----------- checks
   if(!withQD){
-    log_param_init <- log_param_init[1:4]
-    hyperparams$lowerbound <-hyperparams$lowerbound[1:4]
-    hyperparams$upperbound <-hyperparams$upperbound[1:4]
+    log_param_init[6] <- 0
+    log_param_init[5] <- 0
+    hyperparams$lowerbound[5] <- -10
+    hyperparams$upperbound[5] <- 0
+    hyperparams$a = 1
+    hyperparams$b = 1
   }
-  q <- length(log_param_init)
-  if(withQD & (q!=6)){stop('With QD requires 6 parameters')}
-  
-  checkLB <- length(hyperparams$lowerbound)== 4 + withQD
-  checkUB <- length(hyperparams$lowerbound)== 4 + withQD
-  if((!checkLB) | (!checkUB)){
-    stop('Specify upper bounds and lower bounds for all the parameters')}
 
   #---------------------------- Params to sample
-  if(is.null(paramsChains$paramsToSample)){paramsChains$paramsToSample <- 1:q}
+  if(is.null(paramsChains$paramsToSample)){paramsChains$paramsToSample <- 1:ifelse(withQD,6,4)}
   whereRW <- whereToUpdate(paramsChains$paramsToSample)
   
   #--------------------- INIT and Stockage
-  myPostSample <- matrix(0,paramsChains$nMCMC-paramsChains$nBurnin,q) 
+  myPostSample <- matrix(0,paramsChains$nMCMC-paramsChains$nBurnin,6) 
   log_param <- log_param_init
-  
- 
   if(withQD){
-    pi_QD <- log_param[6]
     Z <- list()
-    Z$ZR <- dbinom(n_Exp_R,1,pi_QD)
-    Z$ZV <- dbinom(n_Exp_V,1,pi_QD)
-  }else{Z = NULL}
-  LL <- log_lik(log_param,data=mydata,Z)
-  
-  logprior <- sum(dunif(log_param[1:(4+withQD)], hyperparams$lowerbound[1:(4+withQD)], hyperparams$upperbound[1:(4+withQD)],log = TRUE))
-  if(withQD){
-    logprior <- logprior + dbeta(log_param[6],hyperparams$a,hyperparams$b,log = TRUE)
+    Z$ZR <- rbinom(n_Exp_R,1,log_param[6])
+    Z$ZV <- rbinom(n_Exp_V,1,log_param[6])
+  }else{
+    Z = NULL
   }
+  LL <- log_lik(log_param,data,Z,withQD)
+  logprior <- log_prior(log_param,hyperparams,withQD) 
   
   
   for (i in 1:paramsChains$nMCMC){
@@ -59,13 +52,10 @@ my_mcmc_onechain  = function(data,log_param_init,
       w = sample(whereRW,1) 
       s <- sample(c(0.01,0.1,1),1)*paramsChains$rho
       log_param_c[w] <- log_param[w] + rnorm(1,0,s[w])
-      logprior_c <- sum(dunif(log_param_c[1:(4+withQD)], hyperparams$lowerbound[1:(4+withQD)], hyperparams$upperbound[1:(4+withQD)],log = TRUE))
-      if(withQD){
-        logprior_c <- logprior_c + dbeta(log_param_c[6],hyperparams$a,hyperparams$b,log = TRUE)
-      }
-    
+      
+      logprior_c <- log_prior(log_param_c,hyperparams,withQD)
       if(logprior_c!=-Inf){
-        LL_c <- log_lik(log_param_c,data=mydata,Z)
+        LL_c <- log_lik(log_param_c,data=mydata,Z,withQD)
         alpha <- LL_c + logprior_c - LL - logprior
         if(is.na(LL_c)){browser()}
       #if(LL_c==Inf){LL_c  = -Inf}
@@ -82,23 +72,29 @@ my_mcmc_onechain  = function(data,log_param_init,
     # Z  and pi_QD
     #-------------------------------------------------------------
     if(withQD){
-      
       Z <- sample_Z_QD(log_param,data)
       S <- sum(sapply(Z, sum))
-      log_param[6] = rbeta(1,hyperparams$a+S, hyperparams$b+ n_Exp - S)
+      if(6 %in% paramsChains$paramsToSample){
+        log_param[6] = rbeta(1,hyperparams$a+S, hyperparams$b+ n_Exp - S)
+      }
     }
-    
     if(i>paramsChains$nBurnin){myPostSample[i-paramsChains$nBurnin,] = log_param}
   }
   
 
   #============================ output
-  myPostSample <- as.data.frame(myPostSample)
-  names_myPostSample <- c('log_lambda_ND_V', 'log_lambda_ND_R', 'log_lambda_c','log_lambda_e')
-  if(withQD){names_myPostSample = c(names_myPostSample,'log_lambda_QD','pi_QD')}
+   
+  myLogPostSample <- as.data.frame(myPostSample)
+  names_myLogPostSample <- c('log_lambda_ND_V', 'log_lambda_ND_R', 'log_lambda_c','log_lambda_e','log_lambda_QD','pi_QD')
+  names(myLogPostSample) <- names_myLogPostSample
+  
+  myPostSample <- myLogPostSample
+  myPostSample[,1:5] <- exp(myLogPostSample[,1:5])
+  names_myPostSample <- c('lambda_ND_V', 'lambda_ND_R', 'lambda_c','lambda_e','lambda_QD','pi_QD')
   names(myPostSample) <- names_myPostSample
+  
 
-  return(myPostSample)
+  return(list(myPostSample  = myPostSample,myLogPostSample  = myLogPostSample))
 }
 
 #=================================================================================================
@@ -133,31 +129,41 @@ whereToUpdate = function(vect){
 #================================================================
 sample_Z_QD <- function(log_param,data){
   
-  lambda_ND_V <- exp(log_param[1])
-  lambda_ND_R <- exp(log_param[2])
-  lambda_c <- exp(log_param[3])
-  lambda_e <- exp(log_param[4])
-  lambda_QD <- exp(log_param[5])
+  n_Exp_V <- data$n_Exp_V
+  n_Exp_R <- data$n_Exp_R
+  
   pi_QD <- log_param[6]
-
-  # the green
-  pZV_QD <- pi_QD*dexp(data$T_Exp_V,lambda_QD)
-  pZV_NQD <- (1-pi_QD)*dminGammaEMGaussian(data$T_Exp_V,
+  if(pi_QD==1){
+    Z <- list(ZV =rep(1,n_Exp_V) ,ZR = rep(1,n_Exp_R))
+  }
+  if(pi_QD==0){
+    Z <- list(ZV =rep(0,n_Exp_V) ,ZR = rep(0,n_Exp_R))
+  }
+  if ((pi_QD< 1) & (pi_QD>0)){
+    lambda_ND_V <- exp(log_param[1])
+    lambda_ND_R <- exp(log_param[2])
+    lambda_c <- exp(log_param[3])
+    lambda_e <- exp(log_param[4])
+    lambda_QD <- exp(log_param[5])
+    # the green
+    pZV_QD <- pi_QD*dexp(data$T_Exp_V,lambda_QD)
+    pZV_NQD <- (1-pi_QD)*dminGammaEMGaussian(data$T_Exp_V,
                                            lambda = lambda_c,
                                            mu = data$k/lambda_e,
                                            sigma=sqrt(data$k)/lambda_e,
                                            theta =c(1,lambda_ND_V) )
-  prob_ZV <-  pZV_QD / (pZV_QD+pZV_NQD)
-  ZV <- rbinom(length(data$T_Exp_V),1,prob_ZV)
-  
-  # the red
-  pZR_QD <- pi_QD*dexp(data$T_Exp_R,lambda_QD)
-  pZR_NQD <- (1-pi_QD)*dminGammaEMGaussian(data$T_Exp_R,
+    prob_ZV <-  pZV_QD / (pZV_QD+pZV_NQD)
+    ZV <- rbinom(n_Exp_V,1,prob_ZV)
+    # the red
+    pZR_QD <- pi_QD*dexp(data$T_Exp_R,lambda_QD)
+    pZR_NQD <- (1-pi_QD)*dminGammaEMGaussian(data$T_Exp_R,
                                            lambda = lambda_c,
                                            mu = (data$k+ data$kprime)/lambda_e,
                                            sigma=sqrt(data$k+data$kprime)/lambda_e,
                                            theta =c(1,lambda_ND_R) )
-  prob_ZR <-  pZR_QD / (pZR_QD+pZR_NQD)
-  ZR <- rbinom(length(data$T_Exp_R),1,prob_ZR)
-  return(list(ZV = ZV,ZR = ZR))
+    prob_ZR <-  pZR_QD / (pZR_QD+pZR_NQD)
+    ZR <- rbinom(length(data$T_Exp_R),1,prob_ZR)
+    Z <- list(ZV = ZV, ZR= ZR)
+  }
+    return(Z)
 }
