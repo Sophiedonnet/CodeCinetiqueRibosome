@@ -10,24 +10,23 @@ source('myMCMC.R')
 ################ Params  for simulation
 ###################################################
 
-
+Tmax <- 200
 #------------------- Params of natural death 
-lambda_ND_V <- 1/70
-lambda_ND_R <- 1/85
+lambda_ND_V <- 1/200
+lambda_ND_R <- 1/200
 
 #------------------- Params of ADN reading
 lambda_c <- 1/10
-lambda_e <- 1/3
+lambda_e <- 1/0.5
 k <- 16
 kprime <- 30
-delta <- 0
 
 param_true = c(lambda_ND_V, lambda_ND_R,lambda_c,lambda_e)
 log_param_true <- log(param_true)
 mu_true <- 1/param_true
 
 #------------------- Params of Quick death
-pi_QD <-0.1# probability of quick death
+pi_QD <-0# probability of quick death
 lambda_QD = 1/6;
 
 param_true <- c(param_true,lambda_QD,pi_QD)
@@ -43,25 +42,27 @@ n_C  <- 500 # controle
 
 #------------------ données expérimentales  SIMULATION  exp(lambda_c) + Gamma(k, lambda_e) with  additional Quick death
 #------- Natural death
-T_R_C <- rexp(n_C,lambda_ND_R)
-T_V_C <- rexp(n_C,lambda_ND_V)
-hist(T_R_C,freq = FALSE,nclass = n_C/10,main="Natural Death")  
+T_R_C <- rNormalDeath(n_C,lambda_ND_R,Tmax)
+T_V_C <- rNormalDeath(n_C,lambda_ND_V,Tmax)
+
+par(mfrow=c(1,2))
 hist(T_V_C,freq = FALSE,nclass = n_C/10,main="Natural Death")  
+curve(dNormalDeath(x,lambda_ND_V,Tmax),add=TRUE,col='green')
+hist(T_R_C,freq = FALSE,nclass = n_C/10,main="Natural Death")  
+curve(dNormalDeath(x,lambda_ND_R,Tmax),add=TRUE,col='red')
 
 
 #------- Exp with quick death 
-T_Exp_V <- rOurModel(n_V,lambda_c,k,lambda_e,lambda_ND_V,pi_QD,lambda_QD)$Y
-T_Exp_R <- rOurModel(n_R,lambda_c,k+kprime,lambda_e,lambda_ND_R,pi_QD,lambda_QD)$Y
+T_Exp_V <- rOurModel(n_V,param_true,k,kprime,color='green',Tmax)$Y
+T_Exp_R <- rOurModel(n_R,param_true,k,kprime,color='red',Tmax)$Y
 
 par(mfrow=c(1,2))
 begin_title <- ifelse(pi_QD > 0,'With','Without')
 hist(T_Exp_V,freq=FALSE,nclass =min(n_V/10,100), main=paste(begin_title,"Quick Death. Green",sep=' '))  
-lines(density(T_Exp_V))
-curve(dOurModel(x,param_true,k,kprime,color='green'),add=TRUE,col='green',lwd=2,lty = 1)
+curve(dOurModel(x,param_true,k,kprime,color='green',Tmax),add=TRUE,col='green',lwd=2,lty = 1)
 
 hist(T_Exp_R,freq=FALSE,nclass= min(n_R/10,100), main=paste(begin_title,"Quick Death. Red",sep=' '))  
-lines(density(T_Exp_R))
-curve(dOurModel(x,param_true,k,kprime,color='red'),add=TRUE,col='red',lwd=2,lty = 1)
+curve(dOurModel(x,param_true,k,kprime,color='red',Tmax),add=TRUE,col='red',lwd=2,lty = 1)
 
 
 
@@ -82,7 +83,7 @@ paramsChains = list(nMCMC=20000,rho=rep(10,6))
 paramsChains$nBurnin <- paramsChains$nMCMC/10
 paramsChains$rho[4] <- 1
 paramsChains$rho[5] <- 1
-paramsChains$paramsToSample =c(1:4) # 1:4 #
+paramsChains$paramsToSample =c(5,6) # 1:4 #
 log_param_init = c(-1,-1,-2,-1,1,0)
 paramsChains$withQD  = (pi_QD>0)
 if(paramsChains$withQD){
@@ -106,7 +107,7 @@ hyperparams$upper[1:2] <- -log(50)
 hyperparams$lowerbound[3] <- -log(20)  #lambda_c
 hyperparams$upperbound[3] <- - log(5)
 hyperparams$lowerbound[4] <- -log(5) #lambda_e
-hyperparams$upperbound[4] <- -log(1) 
+hyperparams$upperbound[4] <- 2 
 hyperparams$lowerbound[5] <- -log(5) #lambda_QD
 hyperparams$upperbound[5] <- -log(1) 
 
@@ -119,7 +120,7 @@ myLogPostSample <- mySample$myLogPostSample
 
 par(mfrow=c(ceiling(length(paramsChains$paramsToSample)/2),2))
 for(m in paramsChains$paramsToSample){
-  plot(1/myPostSample[,m],type='l',xlab='',main=names(myPostSample)[m],ylab=''); 
+  plot(myPostSample[,m],type='l',xlab='',main=names(myPostSample)[m],ylab=''); 
   abline(h=1/param_true[m],col='green',lwd=2)
 }
 
@@ -131,8 +132,8 @@ for(m in paramsChains$paramsToSample){
   }else{
     sprior <- rbeta(10000,hyperparams$a,hyperparams$b)
   }
-  plot(density(myPostSample[,m]),main=names(myPostSample)[m])
-  abline(v= param_true[m],col='green',lwd=2)
+  plot(density(1/myPostSample[,m]),main=names(myPostSample)[m])
+  abline(v= 1/param_true[m],col='green',lwd=2)
   lines(density(sprior),col='orange',lwd = 2)
   
 }

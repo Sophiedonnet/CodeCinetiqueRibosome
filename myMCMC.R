@@ -52,7 +52,6 @@ my_mcmc_onechain  = function(data,log_param_init,
       w = sample(whereRW,1) 
       s <- sample(c(0.01,0.1,1),1)*paramsChains$rho
       log_param_c[w] <- log_param[w] + rnorm(1,0,s[w])
-      
       logprior_c <- log_prior(log_param_c,hyperparams,withQD)
       if(logprior_c!=-Inf){
         LL_c <- log_lik(log_param_c,data=mydata,Z,withQD)
@@ -60,6 +59,7 @@ my_mcmc_onechain  = function(data,log_param_init,
         if(is.na(LL_c)){browser()}
       #if(LL_c==Inf){LL_c  = -Inf}
         if (log(runif(1))<alpha){
+          if (w==5){print(c(i,'accept'))}
           log_param <- log_param_c
           LL <- LL_c
           logprior <-  logprior_c 

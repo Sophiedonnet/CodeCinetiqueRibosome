@@ -8,14 +8,40 @@ transfo_Gamma_Param <- function(mu,sigma){
   
 }
 
+
+#----------------------------------------------------------------
+#----------- min(Exponentielle, Tmax)  : simulation
+#----------------------------------------------------------------
+rNormalDeath = function(n,lambda_ND,Tmax = Inf){
+  e = rexp(n,lambda_ND)
+  e[e>=Tmax] = Tmax
+  return(e)
+}
+
+#----------------------------------------------------------------
+#----------- min(Exponentielle, Tmax)  : densité
+#----------------------------------------------------------------
+dNormalDeath = function(x,lambda_ND,Tmax = Inf,log = FALSE){
+  
+  if(Tmax==Inf){
+    d = dexp(x,lambda_ND,log)
+    }else{
+    d = 0*x
+    d[x==Tmax] = 1-pexp(Tmax,lambda_ND)
+    d[x<Tmax] = dexp(x[x<Tmax],lambda_ND)
+    if(log){d <- log(d)}
+  }
+  return(d)
+}
+ 
 #----------------------------------------------------------------
 #--------------------------  densité min(Gamma,Exponentially Modified Gaussian) 
 #-----------------------------------------------------------------
 
-# TV_LD ~ min( UV,VV) with UV ~ Gamma(theta[1], theta[2]), VV ~ Exp(lambda) + N(mu,sigma)   
-dminGammaEMGaussian <- function(x,lambda,mu,sigma,theta,log = FALSE){
+# TV_LD ~ min( UV,VV) with UV ~ Exp(lamda_ND), VV ~ Exp(lambda) + N(mu,sigma)   
+dminExpExpplusGaussian <- function(x,lambda,mu,sigma,lambda_ND,Tmax= Inf,log = FALSE){
  
-  if(length(theta)==1){theta=c(1,theta)}
+ 
   
   # x: vector of observations
   # lambda: positive real number. Param of the exponential distribution
@@ -27,10 +53,15 @@ dminGammaEMGaussian <- function(x,lambda,mu,sigma,theta,log = FALSE){
   
   F1z <- pemg(x,lambda=lambda,mu=mu,sigma=sigma)
   f1z <- demg(x,lambda=lambda,mu=mu,sigma=sigma)
-  
-  F2z <- pgamma(x,theta[1],theta[2])
-  f2z <- dgamma(x,theta[1],theta[2])
+  F2z <- pexp(x,lambda_ND)
+  f2z <- dexp(x,lambda_ND)
   y <- f1z*(1-F2z) + f2z*(1-F1z)
+  
+  if(Tmax<Inf){
+    FTmax <- pminExpExpplusGaussian(Tmax,lambda,mu,sigma,lambda_ND)
+    y[y==Tmax] = 1-FTmax
+    y[y>Tmax] = 0
+  }
   if(log){y <- log(y)}
   return(y)
 }
@@ -42,9 +73,8 @@ dminGammaEMGaussian <- function(x,lambda,mu,sigma,theta,log = FALSE){
 #----------------------------------------------------------------
 
 # TV  ~ min( UV,VV) with UV ~ Gamma(theta[1], theta[2]), VV ~ Exp(lambda) + N(mu,sigma)   
-pminGammaEMGaussian <- function(x,lambda,mu,sigma,theta){
+pminExpExpplusGaussian <- function(x,lambda,mu,sigma,lambda_ND){
   
-  if(length(theta)==1){theta=c(1,theta)}
   # x: vector of real number
   # lambda: positive real number. Param of the exponential distribution
   # mu:  real number. Mean of the gaussian
@@ -53,7 +83,7 @@ pminGammaEMGaussian <- function(x,lambda,mu,sigma,theta){
   # output : vector of length x
 
   F1z <- pemg(x,lambda = lambda,mu = mu, sigma = sigma)
-  F2z <- pgamma(x,theta[1],theta[2])
+  F2z <- pexp(x,lambda_ND)
   1-(1-F1z)*(1-F2z)
   
   
@@ -64,21 +94,21 @@ pminGammaEMGaussian <- function(x,lambda,mu,sigma,theta){
 #--------------------------  Simulation of a sample from  min(Gamma,EMGamma + delta) 
 #-----------------------------------------------------------------
 
-# TV_LD ~ min( UV,VV) with UV ~ Gamma(theta[1], theta[2]), VV ~ delta + Exp(lambda_c) + Gamma(k,lambda_e)   
-rminGammaEMGamma <- function(n,lambda_c,k,lambda_e,theta_ND,delta = 0){
+# TV_LD ~ min( UV,VV) with UV ~ Exp(lambda_ND), VV ~ Exp(lambda_c) + Normal(k/lambda_e,sqrt(k)/lambda)   
+rminExpExpplusGaussian <- function(n,param,k,kprime,color='red',Tmax = Inf){
   
   # n: size of sample
-  # lambda_c: Param of the exponential distribution for the time to go to the ADN
-  # k:  Param of the Gamma. Number of codon
-  # lambda_e:  positive real number. Param of the Gamma. Inverse of the mean length of lecture per Codon (élongation)
-  # theta_ND:  vector of 2 positive real number. Param of the gamma  distribution representing the natural death
-  # delta : parameter of lag 
-  # output : vector of length n
+  lambda_ND_V <- param[1]
+  lambda_ND_R <- param[2]
+  lambda_c <- param[3]
+  lambda_e <- param[4]
+  lambda_ND <- ifelse(color=='red',lambda_ND_R,lambda_ND_V)
+  nbcodons <- ifelse(color=='red',k+kprime,k)
   
-  if(length(theta_ND)==1){theta_ND=c(1,theta_ND)}
-  U <- rgamma(n,shape = theta_ND[1],rate = theta_ND[2])    # mort naturelle lente
-  V <- delta + rexp(n,lambda_c) + rnorm(n,k/lambda_e,sqrt(k)/lambda_e) # extinction by reading
+  U <- rNormalDeath(n,lambda_ND,Tmax)    # mort naturelle lente
+  V <- rexp(n,lambda_c) + rnorm(n,nbcodons /lambda_e,sqrt(nbcodons )/lambda_e) # extinction by reading
   Y <- apply(cbind(U,V),1,min)
+  Y[Y>=Tmax] = Tmax
   return(Y)
   
 }
@@ -88,10 +118,9 @@ rminGammaEMGamma <- function(n,lambda_c,k,lambda_e,theta_ND,delta = 0){
 #----------Simulation of a sample from  pi_QD Gamma() + (1-pi_QD)*min(Gamma,EMGamma)  
 #----------------------------------------------------------------------------------------------------
 
-rOurModel <- function(n,lambda_c,k,lambda_e,theta_ND,pi_QD = 0 ,lambda_QD=1){
+rOurModel <- function(n,param,k,kprime,color='red',Tmax = Inf){
   
-  
-  # x: vector of real number
+  # n: number of simulation 
   # lambda_c: Param of the exponential distribution for the time to go to the ADN
   # k:  Param of the Gamma. Number of codon
   # lambda_e:  positive real number. Param of the Gamma. Inverse of the mean length of lecture per Codon (élongation)
@@ -100,20 +129,28 @@ rOurModel <- function(n,lambda_c,k,lambda_e,theta_ND,pi_QD = 0 ,lambda_QD=1){
   # lambda_QD: 1/mean of time of quick death phenomenon 
   # output : vector of length n
   
-
-  if(length(theta_ND)==1){theta_ND=c(1,theta_ND)}
+  lambda_ND_V <- param[1]
+  lambda_ND_R <- param[2]
+  lambda_c <- param[3]
+  lambda_e <- param[4]
+  lambda_QD <- param[5]
+  pi_QD <- param[6]
+  lambda_ND <- ifelse(color=='red',lambda_ND_R,lambda_ND_V)
+  nbcodons <- ifelse(color=='red',k+kprime,k)
   
+ 
   Z_QD <- sample(c(1,0),n,replace=TRUE,prob = c(pi_QD, 1-pi_QD)) 
   T_QD <- rexp(n,lambda_QD)
-  T_LD <- rminGammaEMGamma(n,lambda_c,k,lambda_e,theta_ND,delta)
+  T_LD <- rminExpExpplusGaussian(n,param,k,kprime,color,Tmax)
   Y <- Z_QD * T_QD  + (1-Z_QD)*T_LD
+  Y[Y>Tmax] <- Tmax 
   return(list(Y = Y,Z  = Z_QD))
 }
 
 #---------------------------------------------------------------------------------------------------
 #----------Density of  pi_QD Gamma() + (1-pi_QD)*min(Gamma,EMGamma)  
 #----------------------------------------------------------------------------------------------------
-dOurModel <- function(x,param,k,kprime,color='red'){
+dOurModel <- function(x,param,k,kprime,color='red',Tmax = Inf,log = FALSE){
   
   # param = (lambda_ND,lambda_c: Param of the exponential distribution for the time to go to the ADN
   # k:  Param of the Gamma. Number of codon
@@ -133,9 +170,16 @@ dOurModel <- function(x,param,k,kprime,color='red'){
   lambda_ND <- ifelse(color=='red',lambda_ND_R,lambda_ND_V)
   nbcodons <- ifelse(color=='red',k+kprime,k)
   
-  dQD <- dexp(x,lambda_QD)
-  dNQD <- dminGammaEMGaussian(x,lambda_c,mu= nbcodons/lambda_e ,sigma=sqrt(nbcodons)/lambda_e,theta =c(1,lambda_ND))
-  return(dQD*pi_QD + (1-pi_QD)*dNQD)
+  f <- rep(0,length(x))
+  dQD <- dexp(x[x<Tmax],lambda_QD)
+  dNQD <- dminExpExpplusGaussian(x[x<Tmax],lambda_c,mu= nbcodons/lambda_e ,sigma=sqrt(nbcodons)/lambda_e,lambda_ND)
+  f[x<Tmax] <- dQD*pi_QD + (1-pi_QD)*dNQD
+  
+  if(Tmax < Inf){
+    FTmax <- pi_QD*pexp(Tmax,lambda_QD) + (1-pi_QD)*pminExpExpplusGaussian(Tmax,lambda_c,mu= nbcodons/lambda_e ,sigma=sqrt(nbcodons)/lambda_e,lambda_ND)
+    f[x==Tmax]  = 1- FTmax
+  }
+  if(log){return(log(f))}else{return(f)}
 } 
 
 # 
@@ -153,59 +197,12 @@ estim_param_Gamma <- function(X){
   return(c(alpha_hat,beta_hat))
 }
 
-
- 
-
-# #----------------- Likelihood (TV, TR)
-# log_lik_withoutQD <- function(log_param,data=list()){
-#   
-#   # log_param: log(lambda_ND_V),log(lambda_ND_R), log(lambda_c),log(lambda_e)
-#   
-#   lambda_ND_V <- exp(log_param[1])
-#   lambda_ND_R <- exp(log_param[2])
-#   lambda_c <- exp(log_param[3])
-#   lambda_e <- exp(log_param[4])
-#   
-#   k <- data$k
-#   kprime <- data$kprime
-#   
-#   d <- 0 
-#   
-#   if (!is.null(data$T_Contr_V)){
-#     d1 <- sum(dexp(data$T_Contr_V, lambda_ND_V,log  = TRUE))
-#     d<- d + d1
-#   }
-#   
-#   
-#   if (!is.null(data$T_Contr_R)){
-#     d2 <- sum(dexp(data$T_Contr_R, lambda_ND_R,log  = TRUE))
-#     d<- d + d2
-#   }
-#   
-#   
-#   if (!is.null(data$T_Exp_V)){
-#     mu_V <- k/lambda_e
-#     sigma_V <- sqrt(k)/lambda_e
-#     U3 <- dminGammaEMGaussian(data$T_Exp_V, lambda = lambda_c,mu = mu_V,sigma = sigma_V,c(1,lambda_ND_V),log = TRUE)
-#     d <- d + sum(U3) }
-#   
-#   if (!is.null(data$T_Exp_R)){
-#     mu_R <- (k+kprime)/lambda_e
-#     sigma_R <- sqrt(k+kprime)/lambda_e
-#     U4 <- dminGammaEMGaussian(data$T_Exp_R, lambda = lambda_c,mu = mu_R,sigma = sigma_R,c(1,lambda_ND_R),log = TRUE)
-#     d <- d + sum(U4) 
-#   }
-#   
-#   return(d)
-#   }
-# 
-
-
 #----------------- Likelihood (TV, TR)
 log_lik <- function(log_param,data,Z = NULL,withQD){
 
   # log_param: log(lambda_ND_V),log(lambda_ND_R), log(lambda_c),log(lambda_e) [log(lambda_QD) pi_QD]
 
+  Tmax <- data$Tmax
   k <- data$k
   kprime <- data$kprime
   lambda_ND_V <- exp(log_param[1])
@@ -228,12 +225,12 @@ log_lik <- function(log_param,data,Z = NULL,withQD){
   d <- 0 
   ############## compute likelihood 
   if (!is.null(data$T_Contr_V)){
-    d1 <- dexp(data$T_Contr_V, lambda_ND_V,log  = TRUE)
+    d1 <- dNormalDeath(data$T_Contr_V, lambda_ND_V,Tmax,log  = TRUE)
     d<- d + sum(d1)
   }
   
   if (!is.null(data$T_Contr_R)){
-    d2 <- dexp(data$T_Contr_R, lambda_ND_R,log  = TRUE)
+    d2 <- dNormalDeath(data$T_Contr_R, lambda_ND_R,Tmax,log  = TRUE)
     d<- d + sum(d2)
   }
   
@@ -242,7 +239,7 @@ log_lik <- function(log_param,data,Z = NULL,withQD){
     if(sum(ZV==0)>0){
        mu_V <- k/lambda_e
       sigma_V <- sqrt(k)/lambda_e
-      U3_NQD <- dminGammaEMGaussian(data$T_Exp_V[ZV==0], lambda = lambda_c,mu = mu_V,sigma = sigma_V,lambda_ND_V,log = TRUE)
+      U3_NQD <- dminExpExpplusGaussian(data$T_Exp_V[ZV==0], lambda = lambda_c,mu = mu_V,sigma = sigma_V,lambda_ND_V,Tmax,log = TRUE)
       d <- d + sum(U3_NQD)
     }
     if(sum(ZV==1)>0){
