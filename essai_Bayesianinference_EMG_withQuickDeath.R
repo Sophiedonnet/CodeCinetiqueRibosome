@@ -10,10 +10,10 @@ source('myMCMC.R')
 ################ Params  for simulation
 ###################################################
 
-Tmax <- 200
+Tmax <- 100
 #------------------- Params of natural death 
-lambda_ND_V <- 1/200
-lambda_ND_R <- 1/200
+lambda_ND_V <- 1/70
+lambda_ND_R <- 1/85
 
 #------------------- Params of ADN reading
 lambda_c <- 1/10
@@ -36,20 +36,25 @@ mu_true[6] <- pi_QD
   
 
 #------------------- Nb d'observations
-n_V <- n_R <- 500 # expériences
-n_C  <- 500 # controle
+n_V <- n_R <- 1000 # expériences
+n_C  <- 5000 # controle
 
 
 #------------------ données expérimentales  SIMULATION  exp(lambda_c) + Gamma(k, lambda_e) with  additional Quick death
 #------- Natural death
-T_R_C <- rNormalDeath(n_C,lambda_ND_R,Tmax)
-T_V_C <- rNormalDeath(n_C,lambda_ND_V,Tmax)
+T_R_C <- rExpCensored(n_C,lambda_ND_R,Tmax)
+T_V_C <- rExpCensored(n_C,lambda_ND_V,Tmax)
 
-par(mfrow=c(1,2))
+par(mfrow=c(2,2))
 hist(T_V_C,freq = FALSE,nclass = n_C/10,main="Natural Death")  
-curve(dNormalDeath(x,lambda_ND_V,Tmax),add=TRUE,col='green')
+curve(dExpCensored(x,lambda_ND_V,Tmax),add=TRUE,col='green')
 hist(T_R_C,freq = FALSE,nclass = n_C/10,main="Natural Death")  
-curve(dNormalDeath(x,lambda_ND_R,Tmax),add=TRUE,col='red')
+curve(dExpCensored(x,lambda_ND_R,Tmax),add=TRUE,col='red')
+
+plot(ecdf(T_V_C))
+curve(pExpCensored(x,lambda_ND_V,Tmax),add=TRUE,col='green')
+plot(ecdf(T_R_C))
+curve(pExpCensored(x,lambda_ND_R,Tmax),add=TRUE,col='red')
 
 
 #------- Exp with quick death 
@@ -77,13 +82,13 @@ mydata$T_Exp_R <- T_Exp_R
 mydata$T_Exp_V <- T_Exp_V
 mydata$n_Exp_R <- length(mydata$T_Exp_R)
 mydata$n_Exp_V <- length(mydata$T_Exp_V)
-
+mydata$Tmax <- Tmax
 
 paramsChains = list(nMCMC=20000,rho=rep(10,6))
 paramsChains$nBurnin <- paramsChains$nMCMC/10
 paramsChains$rho[4] <- 1
 paramsChains$rho[5] <- 1
-paramsChains$paramsToSample =c(5,6) # 1:4 #
+paramsChains$paramsToSample = 1:3 #c(5,6) #
 log_param_init = c(-1,-1,-2,-1,1,0)
 paramsChains$withQD  = (pi_QD>0)
 if(paramsChains$withQD){
@@ -121,7 +126,7 @@ myLogPostSample <- mySample$myLogPostSample
 par(mfrow=c(ceiling(length(paramsChains$paramsToSample)/2),2))
 for(m in paramsChains$paramsToSample){
   plot(myPostSample[,m],type='l',xlab='',main=names(myPostSample)[m],ylab=''); 
-  abline(h=1/param_true[m],col='green',lwd=2)
+  abline(h=param_true[m],col='green',lwd=2)
 }
 
 par(mfrow=c(ceiling(length(paramsChains$paramsToSample)/2),2))
@@ -149,7 +154,7 @@ if((3 %in% paramsChains$paramsToSample) & (4 %in% paramsChains$paramsToSample)){
 
 
 ############## 
-abs <- seq(0,max(c(mydata$T_Exp_V,mydata$T_Exp_R)),len= 1000)
+abs <- seq(0,200,len= 1000)
 param_estim <- apply(myPostSample,2,mean)
 P <- computationToPlotCurves(abs, param_true,k,kprime)
 P$comp <- "True"
@@ -157,8 +162,9 @@ Pestim <- computationToPlotCurves(abs, param_estim,k,kprime)
 Pestim$comp <- "Estim"
 allP <- rbind(P,Pestim)
 
-Ptemp <- allP %>% filter(Curves %in% c('0.Natural Death','3. Sum Arrival + reading',"4. min(ND,Reading)","5. Quick Death",'6. Final model')) 
-g <- ggplot(data = Ptemp, aes(x=time,y=density,colour=Curves))+ geom_line(aes(linetype=comp)) 
+Ptemp <- allP #%>% filter(Curves %in% c('1.Natural Death')) 
+
+g <- ggplot(data = Ptemp, aes(x=time,y=density,colour = Curves))+ geom_line(aes(colour=Curves, linetype=comp))#+  geom_point(aes(shape=comp)) 
 g + facet_wrap(~Color_Part)  
 
 #-------------------- On data 

@@ -4,6 +4,7 @@ my_mcmc_onechain  = function(data,log_param_init,
 
   #param_init : log(lambda_ND_R, lambda_ND_V, lambda_c,lambda_e,[log lambda_QD,pi_DQ])
   
+  if(is.null(data$Tmax)){data$Tmax = Inf}
    
   #--------------------------------------
   withQD <- paramsChains$withQD
@@ -29,12 +30,13 @@ my_mcmc_onechain  = function(data,log_param_init,
   #--------------------- INIT and Stockage
   myPostSample <- matrix(0,paramsChains$nMCMC-paramsChains$nBurnin,6) 
   log_param <- log_param_init
+  Z <- list()
   if(withQD){
-    Z <- list()
     Z$ZR <- rbinom(n_Exp_R,1,log_param[6])
     Z$ZV <- rbinom(n_Exp_V,1,log_param[6])
   }else{
-    Z = NULL
+    Z$ZR = rep(0,n_Exp_R)
+    Z$ZV = rep(0,n_Exp_V)
   }
   LL <- log_lik(log_param,data,Z,withQD)
   logprior <- log_prior(log_param,hyperparams,withQD) 
