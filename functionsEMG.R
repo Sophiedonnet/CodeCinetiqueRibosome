@@ -187,9 +187,9 @@ dOurModel <- function(x,param,k,kprime,color='red',Tmax = Inf,log = FALSE){
 } 
 
 #========================================================================
-#----------------- Likelihood (TV, TR)
+#----------------- Likelihood (TV, TR,ZR,ZV)
 #========================================================================
-log_lik <- function(log_param,data,Z = NULL,withQD){
+log_lik <- function(log_param,data,Z){
 
   # log_param: log(lambda_ND_V),log(lambda_ND_R), log(lambda_c),log(lambda_e) [log(lambda_QD) pi_QD]
 
@@ -198,45 +198,50 @@ log_lik <- function(log_param,data,Z = NULL,withQD){
   kprime <- data$kprime
   
 
-  d <- 0 
-  
+  d = 0
   #--------------------------------------
   lambda_ND_V <- exp(log_param[1])
   lambda_ND_R <- exp(log_param[2])
-  #--------------------------------------
-  d1 <- dExpCensored(data$T_Contr_V, lambda_ND_V,Tmax,log  = TRUE)
-  d<- d + sum(d1)
-  #--------------------------------------
-  d2 <- dExpCensored(data$T_Contr_R, lambda_ND_R,Tmax,log  = TRUE)
-  d<- d + sum(d2)
-  
-  #--------------------------------------
   lambda_c <- exp(log_param[3])
   lambda_e <- exp(log_param[4])      
-  if(withQD){lambda_QD <- exp(log_param[5])}
+  lambda_QD <- exp(log_param[5])
+  #--------------------------------------
+  d1 <- dExpCensored(data$T_Contr_V, lambda_ND_V,Tmax,log  = TRUE)
+  d  <- sum(d1)
+
+  #--------------------------------------
+  d2 <- dExpCensored(data$T_Contr_R, lambda_ND_R,Tmax,log  = TRUE)
+  d  <- d + sum(d2)
   #--------------------------------------
   ZV <- Z$ZV
   mu_V <- k/lambda_e
   sigma_V <- sqrt(k)/lambda_e
   U3_NQD <- dminExpExpplusGaussian(data$T_Exp_V[ZV==0], lambda = lambda_c,mu = mu_V,sigma = sigma_V,lambda_ND_V,Tmax,log = TRUE)
+  d <- d + sum(U3_NQD)
   U3_QD <- dExpCensored(data$T_Exp_V[ZV==1],lambda_QD,Tmax,log=TRUE)
-  d <- d + sum(U3_NQD) + sum(U3_QD)
+  d <- d  + sum(U3_QD)
   #--------------------------------------
   
   ZR <- Z$ZR
   mu_R <- (k+kprime)/lambda_e
   sigma_R <- sqrt(k+kprime)/lambda_e
   U4_NQD <-  dminExpExpplusGaussian(data$T_Exp_R[ZR==0], lambda = lambda_c,mu = mu_R,sigma = sigma_R,lambda_ND_R,Tmax,log = TRUE)
+  d <- d + sum(U4_NQD) 
   U4_QD <- dExpCensored(data$T_Exp_R[ZR==1],lambda_QD,Tmax,log=TRUE)
+  d <- d + sum(U4_QD)
   
-  d <- d + sum(U4_NQD) + sum(U4_QD)
   return(d)
 }
 
 #========================================================================
 log_prior = function(log_param,hyperparams,withQD){
 #========================================================================
+  if('mean' %in% names(hyperparams)){
+    d <- sum(dnorm(log_param[1:(4+withQD)], hyperparams$mean[1:(4+withQD)], hyperparams$sd[1:(4+withQD)],log = TRUE))
+  }
+  if('upperbound' %in% names(hyperparams)){
   d <- sum(dunif(log_param[1:(4+withQD)], hyperparams$lowerbound[1:(4+withQD)], hyperparams$upperbound[1:(4+withQD)],log = TRUE))
+  }
   return(d)
 }
 
