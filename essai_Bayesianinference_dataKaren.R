@@ -17,6 +17,7 @@ T_V_C <- read.table("DataKaren/TVC.txt", quote="\"", comment.char="")$V1
 T_Exp_R <- read.table("DataKaren/TRExp.txt", quote="\"", comment.char="")$V1
 T_Exp_V <- read.table("DataKaren/TVExp.txt", quote="\"", comment.char="")$V1
 
+<<<<<<< refs/remotes/origin/ModifTroncature
 par(mfrow=c(2,2))
 hist(T_V_C,freq = FALSE,nclass =50,main="Natural Death. GREEN")  
 hist(T_R_C,freq = FALSE,nclass =50,main="Natural Death. RED")  
@@ -40,6 +41,37 @@ myCompleteData$T_Exp_R <- T_Exp_R*2
 myCompleteData$T_Exp_V <- T_Exp_V
 
 
+=======
+
+k <- 16
+kprime <- 32
+
+
+mydata  <- list()
+mydata$T_Contr_R <- T_R_C*2.8
+mydata$T_Contr_V <- T_V_C*1.4
+mydata$k <- k
+mydata$kprime <- kprime
+mydata$Tmax <-max(mydata$T_Contr_V)
+mydata$T_Exp_R <- T_Exp_R*2.8
+mydata$T_Exp_V <- T_Exp_V*1.4
+mydata$n_Exp_R <- length(mydata$T_Exp_R)
+mydata$n_Exp_V <- length(mydata$T_Exp_V)
+
+Tmax <- max(mydata$T_Contr_V)
+mydata$T_Contr_R[mydata$T_Contr_R>Tmax] = Tmax
+mydata$T_Exp_R[mydata$T_Exp_R>Tmax] = Tmax
+
+
+par(mfrow=c(2,2))
+hist(mydata$T_Contr_V,nclass=50,freq = FALSE,main="Natural Death. GREEN")  
+hist(mydata$T_Contr_R,nclass=50,freq = FALSE,main="Natural Death. RED")  
+hist(mydata$T_Exp_V,nclass=50,freq=FALSE, main=paste("Experi Data. GREEN",sep=' '))  
+hist(mydata$T_Exp_R,nclass=50,freq=FALSE, main=paste("Experi Data. RED",sep=' '))  
+
+
+
+>>>>>>> dadareal
 ########################################################################
 ################################# ESTIM Contrôle Data 
 ##########################################################################
@@ -90,21 +122,46 @@ Estim_Complete_Data  <- my_mcmc_marg_onechain(myCompleteData,log_param_init,hype
 #--------------- Plot 
 plotPostInf(Estim_Complete_Data, paramChains,log_param_ref = log_param_init)
 
+<<<<<<< refs/remotes/origin/ModifTroncature
 ################################# Log param
 
+=======
+par(mfrow=c(ceiling(length(paramsChains$paramsToSample)/2),2))
+for(m in paramsChains$paramsToSample){
+  plot(mySample$myLogPostSample[,m],type='l',xlab='',main=names(mySample$myPostSample)[m],ylab=''); 
+#  abline(h=log_param_true[m],col='green',lwd=2)
+}
+
+par(mfrow=c(ceiling(length(paramsChains$paramsToSample)/2),2))
+for(m in paramsChains$paramsToSample){
+  plot(density(mySample$myLogPostSample[,m]),main=names(mySample$myLogPostSample)[m])
+#  abline(v= log_param_true[m],col='green',lwd=2)
+  curve(dnorm(x,hyperparams$mean[m],hyperparams$sd[m]),add=TRUE,col='orange',lwd=2)
+}
+>>>>>>> dadareal
 
 
 abs <- seq(0,max(c(myCompleteData$T_Exp_R,myCompleteData$T_Exp_V)),len= 1000)
 
 
+<<<<<<< refs/remotes/origin/ModifTroncature
 P <- computationToPlotCurves(abs, param_init,mydata)
 P$comp <- "Init"
 Pestim <- computationToPlotCurves(abs, param_estim,mydata)
+=======
+#P <- computationToPlotCurves(abs, param_true,mydata$k,mydata$kprime)
+#P$comp <- "True"
+Pestim <- computationToPlotCurves(abs, param_estim,mydata$k,mydata$kprime)
+>>>>>>> dadareal
 Pestim$comp <- "Estim"
-allP <- rbind(P,Pestim)
+allP <- Pestim
 
+<<<<<<< refs/remotes/origin/ModifTroncature
 levels(P$Curves)
 Ptemp <- allP #%>% filter(Curves %in% c("1.Natural Death"))
+=======
+Ptemp <- allP %>% filter(Curves %in% c('2. Sum Arrival + reading', '3. min(ND,Reading)'))
+>>>>>>> dadareal
 
 g <- ggplot(data = Ptemp, aes(x=time,y=density,colour = Curves))+ geom_line(aes(colour=Curves, linetype=comp))#+  geom_point(aes(shape=comp)) 
 g + facet_wrap(~Color_Part)  
@@ -125,13 +182,28 @@ curve(dOurModelExp(x,param_estim,mydata$k,mydata$kprime,color='red',Tmax = mydat
 
 
 
+<<<<<<< refs/remotes/origin/ModifTroncature
 hist(mydata$T_Exp_V,freq=FALSE,nclass =min(mydata$n_Exp_V/10,100), main=paste(begin_title,"Quick Death. Green",sep=' '))  
 lines(density(mydata$T_Exp_V))
 curve(dOurModelExp(x,param_init,mydata$k,mydata$kprime,color='green',Tmax=mydata$Tmax_Exp_V),add=TRUE,col='green',lwd=2,lty = 1)
 curve(dOurModelExp(x,param_estim,mydata$k,mydata$kprime,color='green',Tmax = mydata$Tmax_Exp_V),add=TRUE,col='orange',lwd=2,lty = 2)
+=======
+par(mfrow=c(1,2))
+#begin_title <- ifelse(param_true[6] > 0,'With','Without')
+hist(mydata$T_Exp_V,freq=FALSE,nclass =min(mydata$n_Exp_V/10,100), main=paste("Quick Death. Green",sep=' '))  
+lines(density(mydata$T_Exp_V))
+#curve(dOurModel(x,param_true,mydata$k,mydata$kprime,color='green',Tmax=mydata$Tmax),add=TRUE,col='green',lwd=2,lty = 1)
+curve(dOurModel(x,param_estim,mydata$k,mydata$kprime,color='green',Tmax = mydata$Tmax),add=TRUE,col='orange',lwd=2,lty = 2)
+>>>>>>> dadareal
 
-hist(mydata$T_Exp_R,freq=FALSE,nclass= min(mydata$n_Exp_R/10,100), main=paste(begin_title,"Quick Death. Red",sep=' '))  
+hist(mydata$T_Exp_R,freq=FALSE,nclass= min(mydata$n_Exp_R/10,100), main=paste("Quick Death. Red",sep=' '))  
 lines(density(mydata$T_Exp_R))
+<<<<<<< refs/remotes/origin/ModifTroncature
 curve(dOurModelExp(x,init,mydata$k,mydata$kprime,color='red',Tmax=mydata$Tmax_Exp_R),add=TRUE,col='red',lwd=2,lty = 1)
 curve(dOurModelExp(x,param_estim,mydata$k,mydata$kprime,color='red',Tmax = mydata$Tmax_Exp_R),add=TRUE,col='orange',lwd=2,lty = 2)
+=======
+curve(dOurModel(x,param_estim,mydata$k,mydata$kprime,color='red',Tmax = mydata$Tmax),add=TRUE,col='orange',lwd=2,lty = 2)
+
+
+>>>>>>> dadareal
 
