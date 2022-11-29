@@ -50,7 +50,7 @@ remgCensored = function(n,mu, sigma,lambda,Tmax = Inf, piTrunc=0){
 # }
 
 #----------------------------------------------------------------
-#----------- min(Exponentielle, Tmax)  : simulation
+#----------- min(Gamma, Tmax)  : pdf
 #----------------------------------------------------------------
 pExpCensored = function(x,lambda,Tmax = Inf,piTrunc = 0){
   
@@ -84,6 +84,15 @@ pemgCensored = function(x,mu, sigma,lambda,Tmax = Inf, piTrunc=0){
 #   return(d)
 #   }
 #}
+
+#----------------------------------------------------------------
+#----------- min(Exponentielle, Tmax)  : pdf
+#----------------------------------------------------------------
+pExpCensored = function(x,lambda,Tmax = Inf){
+  
+  return(pGammaCensored(x,1,lambda,Tmax))
+}
+
 
 #----------------------------------------------------------------
 #----------- min(Exponentielle, Tmax)  : densité
@@ -127,12 +136,36 @@ demgCensored  = function(x,mu,sigma,lambda,Tmax = Inf,piTrunc=0,log = FALSE){
 
  
 #----------------------------------------------------------------
-#--------------------------  densité min(Gamma,Exponentially Modified Gaussian) 
+#----------- min(Exponentielle, Tmax)  : densité
+#----------------------------------------------------------------
+dExpCensored = function(x,lambda,Tmax = Inf,log = FALSE){
+  return(dGammaCensored(x,1,lambda,Tmax,log=log))
+}
+
+
+#----------------------------------------------------------------
+#--------------------------  densité min(Exp,Exponentially Modified Gaussian) 
 #-----------------------------------------------------------------
 
 # TV_LD ~ min( UV,VV) with UV ~ Exp(lamda_ND), VV ~ Exp(lambda) + N(mu,sigma)   
 dminExpExpplusGaussian <- function(x,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_ND,Tmax= Inf,log = FALSE){
  
+  # x: vector of observations
+  # lambda: positive real number. Param of the exponential distribution
+  # mu:  real number. Mean of the gaussian
+  # sigma:  positive real number. SD of the gaussian
+  # theta:  vector of 2 positive real number. Param of the gamma  distribution
+  # output : vector of length x
+  
+  return(dminGammaExpplusGaussian(x,lambda,mu,sigma,1,lambda_ND,Tmax,log=log))
+}
+
+#----------------------------------------------------------------
+#--------------------------  densité min(Gamma,Exponentially Modified Gaussian) 
+#-----------------------------------------------------------------
+# TV_LD ~ min( UV,VV) with UV ~ Exp(lamda_ND), VV ~ Exp(lambda) + N(mu,sigma)   
+dminGammaExpplusGaussian <- function(x,lambda,mu,sigma,alpha_ND,beta_ND,Tmax= Inf,log = FALSE){
+  
   # x: vector of observations
   # lambda: positive real number. Param of the exponential distribution
   # mu:  real number. Mean of the gaussian
@@ -155,7 +188,22 @@ dminExpExpplusGaussian <- function(x,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_N
   }
 }
 
+#----------------------------------------------------------------
+#--------------------------  Probability distribution min(Gamma,EMG) 
+#----------------------------------------------------------------
 
+# TV  ~ min( UV,VV) with UV ~ Gamma(theta[1], theta[2]), VV ~ Exp(lambda) + N(mu,sigma)   
+pminGammaExpplusGaussian <- function(x,lambda,mu,sigma,alpha_ND,beta_ND){
+  # x: vector of real number
+  # lambda: positive real number. Param of the exponential distribution
+  # mu:  real number. Mean of the gaussian
+  # sigma:  positive real number. SD of the gaussian
+  # theta:  vector of 2 positive real number. Param of the gamma  distribution
+  # output : vector of length x
+  F1z <- pemg(x,lambda = lambda,mu = mu, sigma = sigma)
+  F2z <- pgamma(x,alpha_ND,beta_ND)
+  1-(1-F1z)*(1-F2z)
+}
 
 #----------------------------------------------------------------
 #--------------------------  Probability distribution min(Gamma,EMG) 
@@ -173,9 +221,22 @@ pminExpExpplusGaussian <- function(x,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_N
   F2z <- pExpCensored(x,lambda_ND,Tmax,piTrunc_ND)
   1-(1-F1z)*(1-F2z)
   
+  # alpha_ND_V, beta_ND_V, alpha_ND_R,beta_ND_R, lambda_c,lambda_e
+  # n: size of sample
+  alpha_ND <- ifelse(color=='red',param[3],param[1])
+  beta_ND <- ifelse(color=='red',param[4],param[2])
   
+  lambda_c <- param[5]
+  lambda_e <- param[6]
+  nbcodons <- ifelse(color=='red',k+kprime,k)
   
+  U <- rGammaCensored(n,alpha_ND,beta_ND,Tmax)    # mort naturelle lente
+  V <- rexp(n,lambda_c) + rnorm(n,nbcodons /lambda_e,sqrt(nbcodons)/lambda_e) # extinction by reading
+  Y <- apply(cbind(U,V),1,min)
+  Y[Y>Tmax] = Tmax
+  return(Y)
 }
+
 
 #----------------------------------------------------------------
 #--------------------------  Simulation of a sample from  min(Gamma,EMGamma + delta) 

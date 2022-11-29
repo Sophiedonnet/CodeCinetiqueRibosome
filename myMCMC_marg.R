@@ -8,6 +8,7 @@ my_mcmc_marg_onechain  = function(data,log_param_init,
 
    
   
+  
    
 
   #---------------------------- Params to sample
