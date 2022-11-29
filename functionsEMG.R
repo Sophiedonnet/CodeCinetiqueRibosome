@@ -347,8 +347,12 @@ logit = function(x){
   
   y <- x
   w <- which(x==-Inf)
-  if(length(w)>0){y[w] = 0}
-  if(length(w)<length(x)){  y[-w] = log(x[-w]/(1-x[-w]))}
+  if(length(w)>0){
+    y[w] = 0;
+    y[-w] = log(x[-w]/(1-x[-w]))
+  }else{
+    y = log(x/(1-x))
+  }
   return(y)
 }
   
@@ -367,7 +371,7 @@ from_param_to_log_param <- function(param){
     log_param[,c(1,3,5,6,8)] <- log(param[,c(1,3,5,6,8)])
     log_param[,c(2,4,7,9)]<- logit(param[,c(2,4,7,9)])
   }
-  names(log_param) <- paste0(c('log_','invlogit_','log_','invlogit_','log_','log_','invlogit_','log_','invlogit_'),names(param))
+  names(log_param) <- paste0(c('log_','logit_','log_','logit_','log_','log_','ogit_','log_','logit_'),names(param))
   return(log_param)
 }
 #=============
@@ -389,49 +393,6 @@ from_logparam_to_param <- function(log_param){
 }
 #=============
 
-#========================================================================
-# plot Curves
-#========================================================================
-
-computationToPlotCurves <- function(x,param,data){
-   
-    
-  
-  nbCurves <- 3*2
-  
-  P <- as.data.frame(rep(x,nbCurves)); names(P)='time'
-  P$Color_Part <- rep(c('Green','Red'),each=nrow(P)/2)
-  
-  myDensity_V <- matrix(0,length(x),nbCurves/2)
-  myDensity_V[,1] <- dExpCensored(x,lambda=param[1],Tmax = data$Tmax_Contr_V,piTrunc =param[2] )
-  myDensity_V[,2] <- demgCensored(x,lambda=param[5],mu = data$k/param[6],sigma = sqrt(data$k)/param[6],piTrunc = param[7],Tmax =data$Tmax_Exp_V)
-  myDensity_V[,3] <- dOurModelExp(x,param,k = data$k, kprime = data$kprime,color='green',Tmax = data$Tmax_Exp_V)
-  
-
-  myDensity_R <- matrix(0,length(x),nbCurves/2)
-  myDensity_R[,1] <-  dExpCensored(x,lambda=param[3],Tmax = data$Tmax_Contr_R,piTrunc =param[4])
-  myDensity_R[,2] <- demgCensored(x,param[5],mu = (data$k+data$kprime)/param[6],sigma = sqrt(data$k+data$kprime)/param[6],piTrunc = param[7],Tmax =data$Tmax_Exp_V)
-  myDensity_R[,3] <- dOurModelExp(x,param,k = data$k, kprime = data$kprime,color='red',Tmax = data$Tmax_Exp_R)
-
-  
-  myCurves = rep(c('1.Natural Death',
-                   '2. Sum Arrival + reading',
-                   '3. min(ND,Reading)'),each=length(x))
-                 
-  # myDensity_V[,4] <-  myDensity_R[,4]  <- dexp(x,param[8])
-  # myDensity_V[,5] <- dOurModel(x,param,k,kprime,Tmax,color='green')
-  # myDensity_R[,5] <- dOurModel(x,param,k,kprime,Tmax,color='red')
-  # 
-  # myCurves <- c(myCurves,rep(c('4. Quick Death','5. Final model'),each=length(x)))
-  #}
-  
-  
-  P$density <- c(c(myDensity_V),c(myDensity_R))
-  P$Curves <- as.factor(rep(myCurves,2))
-  P$Color_Part <- as.factor(P$Color_Part)
-  return(P)
-              
-}
 
 
 transfo_Gamma_Param <- function(mu,sigma){
@@ -454,12 +415,15 @@ estim_param_Gamma <- function(X){
   beta_hat <- alpha_hat/EX
   return(c(alpha_hat,beta_hat))
 }
-
+#========================================================================
+# Expectation of Censored exponential dist
+#========================================================================
 espExpCensored <-function(lambda,Tmax){
   1/lambda-Tmax*(1-pexp(Tmax,lambda))/pexp(Tmax,lambda)
 }
-
+#========================================================================
 init_param <- function(data){
+#========================================================================
   param <- rep(0,9)
   #------- data Contr V
   L_V <- sort(1/seq(1,500,by=0.01))
@@ -473,10 +437,17 @@ init_param <- function(data){
   param[3] <- L_R[which.min(abs(D_R-mean(data$T_Contr_R[data$T_Contr_R<data$Tmax_Contr_R])))]
   param[4] <- mean(data$T_Contr_R == data$Tmax_Contr_R) #pi_trunc_ND_R
   
-  param[c(5,6)] <-  1    
-  param[c(7)] <-  0.5*(mean(data$T_Exp_V == data$Tmax_Contr_V)/param[2] + mean(data$T_Exp_R == data$Tmax_Contr_R)/param[4])
-  param[c(8)] <- 1/1
-  param[c(9)] <- 0.1
+  #--------------------------- 
+  param[c(7)] <-  0.5*(mean(data$T_Exp_V == data$Tmax_Exp_V)/param[2] + mean(data$T_Exp_R == data$Tmax_Exp_R)/param[4])
+  
+  MV <- mean(data$T_Exp_V[data$T_Exp_V<data$Tmax_Exp_V])
+  MR <- mean(data$T_Exp_R[data$T_Exp_R<data$Tmax_Exp_R])
+                        
+  param[6] <- data$kprime/(MR-MV)
+  param[5] <- 1/(MV-data$k/param[6]) 
+  
+  param[c(8)] <- 1
+  param[c(9)] <- 0
   names(param) <- c('lambda_ND_V','piTrunc_ND_V','lambda_ND_R','piTrunc_ND_R','lambda_c','lambda_e','piTrunc_Read', 'lambda_QD','pi_QD')
   return(param)
 }

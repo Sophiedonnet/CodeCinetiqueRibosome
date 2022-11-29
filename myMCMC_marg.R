@@ -99,10 +99,10 @@ log_lik_marg <- function(log_param,data){
   d2 <- dExpCensored(data$T_Contr_R, lambda = param[3],Tmax = data$Tmax_Contr_R,piTrunc = param[4],log  = TRUE)
   d  <- d + sum(d2)
   #------------------------------Data Exp Green---------
-  d3 <- dOurModelExp(data$T_Exp_V,param,k,kprime,color='green',Tmax = data$Tmax_Exp_V,log = TRUE) 
+  d3 <- dOurModelExp(data$T_Exp_V,param,data$k,data$kprime,color='green',Tmax = data$Tmax_Exp_V,log = TRUE) 
   d <- d  + sum(d3)
   #------------------------------Data Exp Red ---------
-  d4 <- dOurModelExp(data$T_Exp_R,param,k,kprime,color='red',Tmax = data$Tmax_Exp_R,log = TRUE) 
+  d4 <- dOurModelExp(data$T_Exp_R,param,data$k,data$kprime,color='red',Tmax = data$Tmax_Exp_R,log = TRUE) 
   d <- d  + sum(d4)
   
   return(d)
