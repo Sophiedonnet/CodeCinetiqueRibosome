@@ -23,6 +23,8 @@ k <- 16
 kprime <- 30
 piTrunc_Read <- 0.2
 
+
+
 #-  Params of Quick death
 pi_QD <- 0# probability of quick death
 lambda_QD <- 1;
@@ -94,47 +96,9 @@ mycompletedata$T_Contr_V <- T_V_C
 # save(mydata, file='essais_datasimu.Rdata') 
 # save(param_true,log_param_true,file='essais_datasimu_param.Rdata')
 ########################################################################
-################################# ESTIM ND  
+################################# Moment Estimation
 ##########################################################################
 
-data <- mycompletedata
-FNV <- ecdf(data$T_Exp_V)
-U <- function(x){
-  1-(1-FNV(x))/(1-pExpCensored(x,lambda=param_true[1],Tmax =data$Tmax_Contr_V,piTrunc = param_true[2]))
-}
-V  <- function(x){
-    pemgCensored(x,mu=data$k/param_true[6],sigma = sqrt(data$k)/param_true[6],lambda = param_true[5],Tmax=data$Tmax_Exp_V,piTrunc=param_true[7])
-}
-
-V2  <- function(x){
-  demgCensored(x,mu=data$k/param_true[6],sigma = sqrt(data$k)/param_true[6],lambda = param_true[5],Tmax=data$Tmax_Exp_V,piTrunc= 0)
-}
-
-abs <- 1:(data$Tmax_Contr_V-1)
-D <- diff(U(abs))
-abs<- abs[-1]
-D <- D*(D>0)
-D <- D*(abs<60)
-D <- D/sum(D)
-
-M <- sum(D*abs)
-V <- sum(D*abs^2)-M^2
-  
-EchaEMG <- remgCensored(10000,mu=data$k/param_true[6],sigma = sqrt(data$k)/param_true[6],lambda = param_true[5],Tmax=data$Tmax_Exp_V,piTrunc= 0)
-mean(EchaEMG)
-
-par(mfrow=c(2,1))
-plot(abs,D,type='l')
-hist(Echan,freq=FALSE,add=TRUE,col='red',nclass=50)
-curve(V2,0,100,col='blue',add=TRUE)
-
- 
-
-
-plot(D*(D>0),type='l')
-  
-log_lik_marg(log_param_true,mydata)
-log_lik_marg(log_param_true,mycompletedata)
 
 
 
@@ -165,7 +129,7 @@ for (i in 1:length(param_init)){
 
 ####################################################
  
-mySample <- my_mcmc_marg_onechain(mydata,log_param_init,hyperparams,paramsChains)
+mySample <- my_mcmc_marg_onechain(mycompletedata,log_param_init,hyperparams,paramsChains)
 
 
  

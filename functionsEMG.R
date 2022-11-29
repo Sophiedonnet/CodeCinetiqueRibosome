@@ -1,19 +1,29 @@
 library(emg)
-
+library(moments)
 
 
 #----------------------------------------------------------------
 #-----------  : simulation
 #----------------------------------------------------------------
 rExpCensored = function(n,lambda,Tmax = Inf, piTrunc=0){
+  
+  if(piTrunc==0){Tmax=Inf}
+  if(Tmax==Inf){piTrunc=0}
+  
   Z <- rbinom(n,1,piTrunc)
   Y <- -1/lambda*log(1-runif(n)*(1-exp(-lambda*Tmax)))
-  e <- Z*Tmax + (1-Z)*Y 
+  e <- (1-Z)*Y
+  if(Tmax<Inf){e <- e + Z*Tmax} 
   return(e)
 }
 
 
 remgCensored = function(n,mu, sigma,lambda,Tmax = Inf, piTrunc=0){
+  
+  if(piTrunc==0){Tmax=Inf}
+  if(Tmax==Inf){piTrunc=0}
+  
+  
   Z <- rbinom(n,1,piTrunc)
   N <- floor(n*1/pemg(Tmax,mu, sigma,lambda))
   Y <- remg(N,mu,sigma,lambda)
@@ -23,7 +33,8 @@ remgCensored = function(n,mu, sigma,lambda,Tmax = Inf, piTrunc=0){
     y <- remg(1,mu,sigma,lambda)
     if(y<Tmax){Y <- c(Y,y)}
   }
-  e <- Z*Tmax + (1-Z)*Y 
+  e <- (1-Z)*Y
+  if(Tmax<Inf){e <- e + Z*Tmax} 
   return(e)
 }
 
@@ -415,6 +426,25 @@ estim_param_Gamma <- function(X){
   beta_hat <- alpha_hat/EX
   return(c(alpha_hat,beta_hat))
 }
+
+
+#========================================================================
+#----------- Estimators of EMG distribution
+#========================================================================
+estim_param_emg <- function(X){
+  
+  m <- mean(X)
+  s <- sd(X)
+  gamma1 <- skewness(X)
+  rho <- (gamma1/2)^(1/3)
+  muhat <- m-s*rho
+  sigmahat <- s*sqrt(1-rho^2)
+  lambdahat <- 1/(s*rho)
+  return(c(muhat,sigmahat,lambdahat))
+}
+
+
+
 #========================================================================
 # Expectation of Censored exponential dist
 #========================================================================
@@ -437,12 +467,34 @@ init_param <- function(data){
   param[3] <- L_R[which.min(abs(D_R-mean(data$T_Contr_R[data$T_Contr_R<data$Tmax_Contr_R])))]
   param[4] <- mean(data$T_Contr_R == data$Tmax_Contr_R) #pi_trunc_ND_R
   
-  #--------------------------- 
-  param[c(7)] <-  0.5*(mean(data$T_Exp_V == data$Tmax_Exp_V)/param[2] + mean(data$T_Exp_R == data$Tmax_Exp_R)/param[4])
+  #--------------------------- About lambda_e, lambde_c, pitrunc
   
-  MV <- mean(data$T_Exp_V[data$T_Exp_V<data$Tmax_Exp_V])
-  MR <- mean(data$T_Exp_R[data$T_Exp_R<data$Tmax_Exp_R])
-                        
+  FNV <- ecdf(data$T_Exp_V)
+  plot(FNV)
+  UV <- function(x){
+    1-(1-FNV(x))/(1-pExpCensored(x,lambda=param[1],Tmax =data$Tmax_Contr_V,piTrunc = param[2]))
+  }
+  plot(UV,0,100)
+  abs <- 1:(data$Tmax_Contr_V-1)
+  DV <- c(0,diff(UV(abs)))
+  DV <- DV*(DV>0)
+  DV <- DV/sum(DV)  
+  MV <- sum(DV*abs)
+
+
+ 
+  FNR <- ecdf(data$T_Exp_R)
+  UR <- function(x){
+    1-(1-FNR(x))/(1-pExpCensored(x,lambda=param[3],Tmax =data$Tmax_Contr_R,piTrunc = param[4]))
+  }
+  abs <- 1:(data$Tmax_Contr_R-1)
+  DR <- c(0,diff(UR(abs)))
+  DR <- DR*(DR>0)
+  DR <- DR/sum(DR)
+  MR <- sum(DR*abs)
+  
+  
+  param[c(7)] <-  0.5*(mean(data$T_Exp_V == data$Tmax_Exp_V)/param[2] + mean(data$T_Exp_R == data$Tmax_Exp_R)/param[4])
   param[6] <- data$kprime/(MR-MV)
   param[5] <- 1/(MV-data$k/param[6]) 
   
