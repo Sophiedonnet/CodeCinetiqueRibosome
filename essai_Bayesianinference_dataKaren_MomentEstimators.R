@@ -71,7 +71,7 @@ theta_hat_V <- estim_param_emg(EchanV[EchanV<60])
 curve(demg(x,theta_hat_V[1],theta_hat_V[2],theta_hat_V[3]),add=TRUE,col='red')
 
 
-#----------- data Exp V
+#----------- data Exp R
 FNR <- ecdf(data$T_Exp_R)
 UR <- function(x){
   1-(1-FNR(x))/(1-pExpCensored(x,lambda=param[3],Tmax =data$Tmax_Contr_R,piTrunc = param[4]))
@@ -80,12 +80,18 @@ abs <- 1:(data$Tmax_Contr_R-1)
 DR <- c(0,diff(UR(abs)))
 DR <- DR*(DR>0)
 DR <- DR/sum(DR)
-EchanR <- sample(abs,10000,prob = DR,replace=TRUE)
-plot(density(EchanR))
-theta_hat_R <- estim_param_emg(EchanR[EchanR<60])
+EchanR <- sample(abs,100000,prob = DR,replace=TRUE)
 
+theta_hat_R <- estim_param_emg(EchanR)
+thetagamma_hat_R <- estim_param_Gamma(EchanR)
+
+par(mfrow=c(1,1))
+plot(density(EchanR))
 curve(demg(x,theta_hat_R[1],theta_hat_R[2],theta_hat_R[3]),add=TRUE,col='red')
-curve(demg(x,theta_hat_V[1],theta_hat_V[2],theta_hat_V[3]),add=TRUE,col='green')
+curve(demg(x,theta_hat_R[1],theta_hat_R[2],theta_hat_R[3]),add=TRUE,col='red')
+curve(dgamma(x,thetagamma_hat_R[1],thetagamma_hat_R[2]),add=TRUE,col='magenta')
+curve(dlnorm(x,mean(log(EchanR)),sd(log(EchanR))),add=TRUE,col='orange')
+
 
 lambda_c <- 0.5*(theta_hat_R[3]+theta_hat_V[3])
 1/lambda_c
@@ -109,13 +115,11 @@ X <- mydata$T_Contr_V[mydata$T_Contr_V<max(mydata$T_Contr_V)]
 hist(X,freq = FALSE,nclass =50,main="Natural Death. GREEN")  
 lines(density(X))
 curve(dExpCensored(x,lambda = param_init[1],piTrunc = 0,Tmax = mydata$Tmax_Contr_V),add=TRUE,col='green',lwd=2,lty = 1)
-curve(dExpCensored(x,lambda = param_estim[1],piTrunc =0,Tmax = mydata$Tmax_Contr_V),add=TRUE,col='orange',lwd=2,lty = 2)
 
 X <- mydata$T_Contr_R[mydata$T_Contr_R<max(mydata$T_Contr_R)]
 hist(X,freq = FALSE,nclass =50,main="Natural Death. Red")  
 lines(density(X))
 curve(dExpCensored(x,lambda = param_init[3],piTrunc = 0,Tmax = mydata$Tmax_Contr_R),add=TRUE,col='red',lwd=2,lty = 1)
-curve(dExpCensored(x,lambda = param_estim[3],piTrunc = 0,Tmax = mydata$Tmax_Contr_R),add=TRUE,col='orange',lwd=2,lty = 2)
 
 
 ########################################################################
