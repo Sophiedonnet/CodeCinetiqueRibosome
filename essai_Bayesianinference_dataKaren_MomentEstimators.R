@@ -66,8 +66,9 @@ DV <- c(0,diff(UV(abs)))
 DV <- DV*(DV>0)
 DV <- DV/sum(DV)
 EchanV <- sample(abs,10000,prob = DV,replace=TRUE)
-plot(density(EchanV[EchanV<60]))
-theta_hat_V <- estim_param_emg(EchanV[EchanV<60])
+TUP = 60
+theta_hat_V <- estim_param_emg(EchanV[EchanV<TUP])
+plot(density(EchanV[EchanV<data$Tmax_Exp_V]),main='Exp green corrected by ND')
 curve(demg(x,theta_hat_V[1],theta_hat_V[2],theta_hat_V[3]),add=TRUE,col='red')
 
 
@@ -81,17 +82,50 @@ DR <- c(0,diff(UR(abs)))
 DR <- DR*(DR>0)
 DR <- DR/sum(DR)
 EchanR <- sample(abs,100000,prob = DR,replace=TRUE)
-
-theta_hat_R <- estim_param_emg(EchanR)
+theta_hat_R <- estim_param_emg(EchanR[EchanR<TUP])
 thetagamma_hat_R <- estim_param_Gamma(EchanR)
 
 par(mfrow=c(1,1))
-plot(density(EchanR))
-curve(demg(x,theta_hat_R[1],theta_hat_R[2],theta_hat_R[3]),add=TRUE,col='red')
+plot(density(EchanR),lwd=2)
+curve(demg(x,lambda=theta_hat_V[3],mu=theta_hat_V[1]*(data$k+data$kprime)/data$k,sigma = theta_hat_V[2]*sqrt((data$k+data$kprime)/data$k)),add=TRUE,col='green')
 curve(demg(x,theta_hat_R[1],theta_hat_R[2],theta_hat_R[3]),add=TRUE,col='red')
 curve(dgamma(x,thetagamma_hat_R[1],thetagamma_hat_R[2]),add=TRUE,col='magenta')
+curve(dexp(x,rate = 1/mean(EchanR)),add=TRUE,col='blue')
 curve(dlnorm(x,mean(log(EchanR)),sd(log(EchanR))),add=TRUE,col='orange')
 
+
+
+WR <- function(x){
+  1-(1-FNR(x))/(1-pemg(x,lambda=theta_hat_V[3],mu=theta_hat_V[1]*(data$k+data$kprime)/data$k,sigma = theta_hat_V[2]*sqrt((data$k+data$kprime)/data$k)))
+}
+plot(1:100,WR(1:100),type='l')
+DR <- c(0,diff(WR(abs)))
+DR <- DR*(DR>0)
+DR <- DR/sum(DR)
+EchanR_ND <- sample(abs,100000,prob = DR,replace=TRUE)
+par(mfrow=c(1,1))
+plot(density(EchanR_ND))
+
+
+
+
+
+¨
+
+TUP2 = 100
+FNR2 <- ecdf(EchanR[EchanR<TUP2])
+UR2 <- function(x){
+  1-(1-FNR2(x))/(1-)
+}
+abs <- 1:(TUP2-1)
+
+plot(abs,UR2(abs),type='l')
+DR2 <- c(0,diff(UR2(abs)))
+DR2 <- DR*(DR2>0)
+DR2 <- DR2/sum(DR2)
+EchanR_SD <- sample(abs,100000,prob = DR2,replace=TRUE)
+par(mfrow=c(1,1))
+plot(density(EchanR_SD))
 
 lambda_c <- 0.5*(theta_hat_R[3]+theta_hat_V[3])
 1/lambda_c
