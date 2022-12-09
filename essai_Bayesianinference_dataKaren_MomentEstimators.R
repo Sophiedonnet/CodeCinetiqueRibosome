@@ -48,6 +48,9 @@ L_V <- sort(1/seq(1,500,by=0.01))
 D_V <-  espExpCensored(L_V,Tmax = data$Tmax_Contr_V)
 param[1] <- L_V[which.min(abs(D_V-mean(data$T_Contr_V[data$T_Contr_V<data$Tmax_Contr_V])))]
 param[2] <- mean(data$T_Contr_V == data$Tmax_Contr_V) #pi_trunc_ND_V
+hist(data$T_Contr_V,freq= FALSE)
+curve(dExpCensored(x,param[1],param[2]),add=TRUE)
+
 
 #------- data Contr R
 L_R <- sort(1/seq(1,500,by=0.01))
@@ -55,21 +58,32 @@ D_R <-  espExpCensored(L_R,Tmax =data$Tmax_Contr_R)
 param[3] <- L_R[which.min(abs(D_R-mean(data$T_Contr_R[data$T_Contr_R<data$Tmax_Contr_R])))]
 param[4] <- mean(data$T_Contr_R == data$Tmax_Contr_R) #pi_trunc_ND_R
 
+hist(data$T_Contr_R,freq= FALSE)
+curve(dExpCensored(x,param[3],param[4]),add=TRUE)
+
+
+
 #----------- data Exp V
 FNV <- ecdf(data$T_Exp_V)
 UV <- function(x){
   1-(1-FNV(x))/(1-pExpCensored(x,lambda=param[1],Tmax =data$Tmax_Contr_V,piTrunc = param[2]))
 }
+par(mfrow=c(1,1))
 plot(UV,0,100)
+
 abs <- 1:(data$Tmax_Contr_V-1)
 DV <- c(0,diff(UV(abs)))
 DV <- DV*(DV>0)
 DV <- DV/sum(DV)
+plot(abs,DV,type='l')
 EchanV <- sample(abs,10000,prob = DV,replace=TRUE)
 TUP = 60
 theta_hat_V <- estim_param_emg(EchanV[EchanV<TUP])
 plot(density(EchanV[EchanV<data$Tmax_Exp_V]),main='Exp green corrected by ND')
-curve(demg(x,theta_hat_V[1],theta_hat_V[2],theta_hat_V[3]),add=TRUE,col='red')
+curve(demg(x,theta_hat_V[1],theta_hat_V[2],theta_hat_V[3]),add=TRUE,col='green')
+
+lambda_e_inv <- theta_hat_V[1]/16
+lambda_e_inv_2 <- theta_hat_V[2]/4
 
 
 #----------- data Exp R
@@ -110,7 +124,6 @@ plot(density(EchanR_ND))
 
 
 
-¨
 
 TUP2 = 100
 FNR2 <- ecdf(EchanR[EchanR<TUP2])
