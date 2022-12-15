@@ -7,13 +7,13 @@ estim_param_moment <- function(data,UP.or.DN = 'UP'){
  
   if(UP.or.DN == 'UP'){Tctr <- data$Tctr_UP}else{Tctr <- data$Tctr_DN}
   if(UP.or.DN == 'UP'){Texp <- data$Texp_UP}else{Texp <- data$Texp_DN}
-  max_Tctr <- ifelse(UP.or.DN == 'UP',data$Tmax_Tctr_UP,data$Tmax_Tctr_DN)
+  Tmax_Tctr <- ifelse(UP.or.DN == 'UP',data$Tmax_Tctr_UP,data$Tmax_Tctr_DN)
   Tmax_Texp <- ifelse(UP.or.DN == 'UP',data$Tmax_Texp_UP,data$Tmax_Texp_DN)
   
   
   
-  param <- rep(0,6)
-  names(param) <- c('lambda_ND','piTrunc_ND','lambda_c','mu_emg','sigma_emg','piTrunc_Read')
+  param <- rep(0,7)
+  names(param) <- c('lambda_ND','piTrunc_ND','lambda_c','mu_emg','sigma_emg','piTrunc_Read','lambda_e')
   
   
   
@@ -47,6 +47,7 @@ estim_param_moment <- function(data,UP.or.DN = 'UP'){
   param[4] <- theta_hat[1]
   param[5] <- theta_hat[2]
   param[6] <- mean(Texp == Tmax_Texp)/param[2]
+  param[7] <- ifelse(UP.or.DN == 'UP', data.i$k,data.i$kprime + data.i$k)/param[4]
   
   return(list(param_estim = param, echan_exp_corr = Echan))
 }  
@@ -111,7 +112,7 @@ plot_Fit_Ctr <- function(data,param_estim_UP,param_estim_DN){
       Fn <- ecdf(data$Tctr_UP); 
       DT_UP <- as.data.frame(rep(t,2))
       names(DT_UP) = 't'
-      DT_UP$Prob <- c(Fn(t),pExpCensored(t,param_estim_UP[1],param_estim_UP[2],Tmax = data$Tmax_Tctr_UP))
+      DT_UP$Prob <- c(Fn(t),pExpCensored(t,lambda=param_estim_UP[1],piTrunc=param_estim_UP[2],Tmax = data$Tmax_Tctr_UP))
       DT_UP$Curve <- paste('UP.', rep(c('Data','Fit'),each=length(t)) )
       DT_UP$data <- 'UP'
       DT_UP$type <- rep(c('Data','Fit'),each=length(t))
@@ -124,7 +125,7 @@ plot_Fit_Ctr <- function(data,param_estim_UP,param_estim_DN){
       Fn <- ecdf(data$Tctr_DN); 
       DT_DN <- as.data.frame(rep(t,2))
       names(DT_DN) = 't'
-      DT_DN$Prob <- c(Fn(t),pExpCensored(t,param_estim_DN[1],param_estim_DN[2],Tmax = data$Tmax_Tctr_DN))
+      DT_DN$Prob <- c(Fn(t),pExpCensored(t,lambda=param_estim_DN[1],piTrunc=param_estim_DN[2],Tmax = data$Tmax_Tctr_DN))
       DT_DN$Curve <- paste('DN.', rep(c('Data','Fit Exp'),each=length(t)) ) 
       DT_DN$data <- 'DN'
       DT_DN$type <- rep(c('Data','Fit Exp'),each=length(t))
@@ -132,7 +133,7 @@ plot_Fit_Ctr <- function(data,param_estim_UP,param_estim_DN){
     DT <- rbind(DT_UP,DT_DN)
     
     
-    q <- ggplot(DT,aes(x=t,y=Prob,group=Curve,color=data)) + geom_line(aes(linetype=type)) + ggtitle(paste0(data$name_data,' .Fit Data Ctr'))
+    q <- ggplot(DT,aes(x=t,y=Prob,group=Curve,color=data)) + geom_line(aes(linetype=type)) + ggtitle(paste0(data$name_data,'. Fit on Ctr Data'))
     return(q)
 }
 
