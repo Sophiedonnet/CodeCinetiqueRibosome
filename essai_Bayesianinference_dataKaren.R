@@ -40,6 +40,9 @@ myCompleteData <- mydata
 myCompleteData$T_Exp_R <- T_Exp_R*2
 myCompleteData$T_Exp_V <- T_Exp_V
 
+par(mfrow=c(1,2))
+hist(mydata_Contr$T_Contr_V,nclass=50,freq = FALSE,main="Natural Death. GREEN")  
+hist(mydata_Contr$T_Contr_R,nclass=50,freq = FALSE,main="Natural Death. RED")  
 
 =======
 
