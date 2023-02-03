@@ -100,7 +100,7 @@ plot_FN_all_data <- function(data){
 #========================================================================
 #---------- plot Fit des fonction de repartition de toutes les données
 #========================================================================
-plot_Fit_Ctr <- function(data,param_estim_UP,param_estim_DN){ 
+plot_Fit_Ctr <- function(data,param_estim_UP,param_estim_DN,which.curve='pdf'){ 
   
   
   
@@ -108,11 +108,25 @@ plot_Fit_Ctr <- function(data,param_estim_UP,param_estim_DN){
     DT_DN <- c()
     ################# UP
     if(!is.null(data$Tctr_UP)){
-      t <- 1:max(data$Tmax_Tctr_UP)
-      Fn <- ecdf(data$Tctr_UP); 
+      if(which.curve=='pdf'){ 
+        t <- 1:max(data$Tmax_Tctr_UP)
+        Fn <- ecdf(data$Tctr_UP)
+        Y_UP <- Fn(t)
+        Fit_UP <- pExpCensored(t,lambda=param_estim_UP[1],piTrunc=param_estim_UP[2],Tmax = data$Tmax_Tctr_UP)
+      }
+      if(which.curve=='density'){
+        w <- which(data$Tctr_UP< data$Tmax_Tctr_UP)
+        pr <- length(w)/length(data$Tctr_UP)
+        d_UP <- density(data$Tctr_UP[w])
+        t <- c(d_UP$x)
+        Y_UP <- d_UP$y*pr
+        Fit_UP <- dExpCensored(t,lambda=param_estim_UP[1],piTrunc=param_estim_UP[2],Tmax = data$Tmax_Tctr_UP)
+      }
+      
+    
       DT_UP <- as.data.frame(rep(t,2))
       names(DT_UP) = 't'
-      DT_UP$Prob <- c(Fn(t),pExpCensored(t,lambda=param_estim_UP[1],piTrunc=param_estim_UP[2],Tmax = data$Tmax_Tctr_UP))
+      DT_UP$Prob <- c(Y_UP,Fit_UP)
       DT_UP$Curve <- paste('UP.', rep(c('Data','Fit'),each=length(t)) )
       DT_UP$data <- 'UP'
       DT_UP$type <- rep(c('Data','Fit'),each=length(t))
@@ -121,11 +135,24 @@ plot_Fit_Ctr <- function(data,param_estim_UP,param_estim_DN){
     ################ DN
     if(!is.null(data$Tctr_DN)){
     
-      t <- 1:max(data$Tmax_Tctr_DN)
-      Fn <- ecdf(data$Tctr_DN); 
+      if(which.curve=='pdf'){ 
+        t <- 1:max(data$Tmax_Tctr_DN)
+        Fn <- ecdf(data$Tctr_DN)
+        Y_DN <- Fn(t)
+        Fit_DN <- pExpCensored(t,lambda=param_estim_DN[1],piTrunc=param_estim_DN[2],Tmax = data$Tmax_Tctr_DN)
+      }
+      if(which.curve=='density'){
+        w <- which(data$Tctr_DN < data$Tmax_Tctr_DN)
+        pr <- length(w)/length(data$Tctr_DN)
+        d_DN <- density(data$Tctr_DN[w])
+        t <- c(d_DN$x)
+        Y_DN <- d_DN$y*pr
+        Fit_DN <- dExpCensored(t,lambda=param_estim_DN[1],piTrunc=param_estim_DN[2],Tmax = data$Tmax_Tctr_DN)
+      }
+      
       DT_DN <- as.data.frame(rep(t,2))
       names(DT_DN) = 't'
-      DT_DN$Prob <- c(Fn(t),pExpCensored(t,lambda=param_estim_DN[1],piTrunc=param_estim_DN[2],Tmax = data$Tmax_Tctr_DN))
+      DT_DN$Prob <- c(Y_DN,Fit_DN)
       DT_DN$Curve <- paste('DN.', rep(c('Data','Fit Exp'),each=length(t)) ) 
       DT_DN$data <- 'DN'
       DT_DN$type <- rep(c('Data','Fit Exp'),each=length(t))
@@ -133,7 +160,7 @@ plot_Fit_Ctr <- function(data,param_estim_UP,param_estim_DN){
     DT <- rbind(DT_UP,DT_DN)
     
     
-    q <- ggplot(DT,aes(x=t,y=Prob,group=Curve,color=data)) + geom_line(aes(linetype=type)) + ggtitle(paste0(data$name_data,'. Fit on Ctr Data'))
+    q <- ggplot(DT,aes(x=t,y=Prob,group=Curve,color=data)) + geom_line(aes(linetype=type)) + ggtitle(paste0(data$name_data,'. Exponential Fit on Ctr Data'))
     return(q)
 }
 
