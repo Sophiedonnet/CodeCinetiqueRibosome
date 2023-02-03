@@ -178,38 +178,48 @@ for (i in 1:length(names_data)){
   where_plot_fit_exp<- paste0("DataKarenComplete/plotFit/dataExp/PDF/",gsub("\\..*","",names_data[i]),"_plotExpData")
   
   ##############         PDF 
-  png(file=paste0(where_plot_fit_exp,'.png'))
-  par(mfrow=c(2,1))
-  
+  D <- c()
   if(!is.null(data.i$Texp_UP)){
-    plot(ecdf(data.i$Texp_UP),main=paste0(gsub("\\..*","",names_data[i]),'. Fit emg+Ctr corr to Exp data. UP'))
+    FnTExp <- ecdf(data.i$Texp_UP)
+    FnTCtr <- ecdf(data.i$Tctr_UP)
     x <- seq(1,data.i$Tmax_Texp_UP)
-    FnTCtr <- ecdf(data.i$Tctr_UP) 
-    Y <- 1-(1-FnTCtr(x))*(1-pemg(x,mu=param_estim_UP[i,4],sigma=param_estim_UP[i,5],lambda=param_estim_UP[i,3]))
-    Y <- Y*(1-mean(data.i$Texp_UP==data.i$Tmax_Texp_UP))
-    lines(x,Y,col=data.i$colorUP,lty = 2,lwd=2)
-    Y2 <-  1-(1-pExpCensored(x,lambda=param_estim_UP[i,1],piTrunc=param_estim_UP[i,2],Tmax = data.i$Tmax_Tctr_UP))*(1-pemg(x,mu=param_estim_UP[i,4],sigma=param_estim_UP[i,5],lambda=param_estim_UP[i,3]))
-    Y2 <- Y2*(1-mean(data.i$Texp_UP==data.i$Tmax_Texp_UP))
-   lines(x,Y2,col=data.i$colorUP,lty = 3,lwd=2)
-    legend('bottomright', legend=c("Empir pdf", "EMG fit + Fn Ctr corr","EMG fit + Exp Ctr corr"),col=c('black', data.i$colorUP,data.i$colorUP), lty=1:3, cex=0.8)
-    
+    A <-  mean(data.i$Texp_UP==data.i$Tmax_Texp_UP)
+    DUP <- as.data.frame(rep(x,3)); names(DUP) <- 't'
+    YExp <- (1-pemg(x,mu=param_estim_UP[i,4],sigma=param_estim_UP[i,5],lambda=param_estim_UP[i,3])
+    Y <- 1-(1-FnTCtr(x))*YExp
+    Y <- Y*(1-A)
+    Y2 <-  1-(1-pExpCensored(x,lambda=param_estim_UP[i,1],piTrunc=param_estim_UP[i,2],Tmax = data.i$Tmax_Tctr_UP))*YExp
+    Y2 <- Y2*(1-A)
+    DUP$pdf <- c(FnTExp(x),Y,Y2)
+    DUP$curve <- as.factor(rep(c('Data','Fit Emg + empir','Fit Emg + Exp'),each = length(x)))
+    DUP$color <- as.factor(data.i$colorUP)
+    DUP$UPDN <- as.factor('UP')
+    D <- rbind(D,DUP)
   }
+  
   if(!is.null(data.i$Texp_DN)){
-    plot(ecdf(data.i$Texp_DN),main=paste0(gsub("\\..*","",names_data[i]),'. Fit emg+Ctr corr to Exp data. DN'))
+    FnTExp <- ecdf(data.i$Texp_DN)
+    FnTCtr <- ecdf(data.i$Tctr_DN)
     x <- seq(1,data.i$Tmax_Texp_DN)
-    FnTCtr <- ecdf(data.i$Tctr_DN) 
-    Y <- 1-(1-FnTCtr(x))*(1-pemg(x,mu=param_estim_DN[i,4],sigma=param_estim_DN[i,5],lambda=param_estim_DN[i,3]))
-    Y <- Y*(1-mean(data.i$Texp_DN==data.i$Tmax_Texp_DN))
-    lines(x,Y,col=data.i$colorDN,lty = 2,lwd=2)
-    Y2 <-  1-(1-pExpCensored(x,lambda=param_estim_DN[i,1],piTrunc=param_estim_DN[i,2],Tmax = data.i$Tmax_Tctr_DN))*(1-pemg(x,mu=param_estim_DN[i,4],sigma=param_estim_DN[i,5],lambda=param_estim_DN[i,3]))
-    Y2 <- Y2*(1-mean(data.i$Texp_DN==data.i$Tmax_Texp_DN))
-    lines(x,Y2,col=data.i$colorDN,lty = 3,lwd=2)
-    legend('bottomright', legend=c("Empir pdf", "EMG fit + Fn Ctr corr","EMG fit + Exp Ctr corr"),col=c('black', data.i$colorDN,data.i$colorDN), lty=1:3, cex=0.8)
-    
-    
+    A <- mean(data.i$Texp_DN==data.i$Tmax_Texp_DN)
+    DDN <- as.data.frame(rep(x,3))
+    names(DDN) <- 't'
+    YExp <- 1-pemg(x,mu=param_estim_DN[i,4],sigma=param_estim_DN[i,5],lambda=param_estim_DN[i,3])
+    Y <- 1-(1-FnTCtr(x))*YExp
+    Y <- Y*(1-A)
+    Y2 <-  1-(1-pExpCensored(x,lambda=param_estim_DN[i,1],piTrunc=param_estim_DN[i,2],Tmax = data.i$Tmax_Tctr_DN))*YExp
+    Y2 <- Y2*(1-A)
+    DDN$pdf <- c(FnTExp(x),Y,Y2)
+    DDN$curve <- as.factor(rep(c('Data','Fit Emg + empir','Fit Emg + Exp'),each = length(x)))
+    DDN$color <- as.factor(data.i$colorDN)
+    DDN$UPDN <- as.factor('DN')
+    D <- rbind(D,DDN)
   }
-  dev.off()
-
+  
+  p <- ggplot(D,aes(x=t,y=pdf,group=curve,col=color))+geom_line(aes(linetype=curve))+facet_grid(rows = vars(UPDN) )+ggtitle(data.i$name_data)
+  p
+  ggsave(paste0(where_plot_fit_exp,'.png'))
+  
   ##############        hist 
   where_plot_fit_exp<- paste0("DataKarenComplete/plotFit/dataExp/Density/",gsub("\\..*","",names_data[i]),"_plotExpData")
   png(file=paste0(where_plot_fit_exp,'.png'))
