@@ -80,7 +80,7 @@ plot_FN_all_data <- function(data){
   
   DTT <- lapply(1:length(Times),function(k){
     t <- 1:max(Times[[k]])
-    Fn <- ecdf(Times[[k]]); 
+    Fn <- ecdf(Times[[k]]);  # fonction de répartition. 
     DT <- as.data.frame(t)
     DT$Fn <- Fn(t)
     DT$data <- names(Times)[k]

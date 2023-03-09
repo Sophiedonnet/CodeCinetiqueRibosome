@@ -1,0 +1,76 @@
+---
+title: "Instructions pour faire tourner les Codes MomentEstimation " 
+author: "Sophie Donnet"
+date: "2023-03-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Avant de commencer
+
+
+## Environnement
+
+Tout tourne sous R. 
+Donc 1/ installer R et 2/ l'ide R studio
+
+## Récupérer les fichiers. 
+
+Ils sont sous github.  https://github.com/Sophiedonnet/CodeCinetiqueRibosome
+Vous êtes listés comme collaborateurs. De mon côté pour manipuler et communiquer avec Github j'utilise une interface. [Github desktop](https://desktop.github.com/) est bien. 
+
+Donc **à la première utilisation**, 
+
+1/ Installer github desktop
+
+2/ Cloner notre répertoire. Il sera dans vos fichiers. 
+
+3/ Quand vous aurez fait vos modifs, aller dans github desktop, 
+    - committer les changements ( = garder en mémoire des différents changements faits dans les fichiers)
+    - pusher sur github (envoie les changements au serveur). Ca apparaîtra sur github et donc permet aux autres de les récupérer. 
+    
+On peut toujours annuler, revenir en arrière et récupérer des vieilles versions. 
+
+Pour **les utilisations suivantes, toujours puller avant de commencer à travailler**
+Ca permettra à tout le monde de travailler sur la dernière version. 
+
+On est prêts à faire tourner les codes.  Pour commencer, ouvrir le fichier-projet `CodeCinetique.Rproj`. Ca ouvre Rstudio dans le bon répertoire. 
+
+
+
+## Installer les packages utiles : 
+
+### A faire une seule fois.
+
+```{r install packages, eval = FALSE}
+install.packages("ggplot2") # pour les graphes
+install.packages("dplyr")  #manipulation de tableau de données
+install.packages("emg") # fonction pour l'exponentiallly modified gaussian
+```
+
+Sur ordi de Karen, installer packages par ligne de commande `conda install -c r r-pacakge`
+
+
+
+# Faire tourner les calculs 
+Ouvrir le fichier `essai_MomentEstimator_dataKarenComplete.R`
+
+
+NB : Ctrl + Entrée permet d'excuter une commnde. 
+
+
+### Ensuite 
+
+
+
+
+
+
+
+
+
+

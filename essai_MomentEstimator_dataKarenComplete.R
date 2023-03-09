@@ -1,20 +1,35 @@
-rm(list=ls())
+rm(list=ls()) ### efface toutes les variables en mémoire
+
+
+##########################################################################
+########################### installation des packages nécéssaires
+#####################################################################"#### 
+#install.packages("ggplot2") # pour les graphes
+#install.packages("dplyr") #  manipulation de tableau de données
+#install.packages("emg") #
+
+
+##########################################################################
+######################################### Loader les packages
+###########################################################################
 library(ggplot2)
 library(dplyr)
 library(emg)
 source('functionsEMG.R')
 source('functionsMomentEstimations.R')
+
+
+
 ##################################################
 ################ Load and format data
 ###################################################
 
 # 
-where_data <- c('DataKarenComplete/RawData/')
+where_data <- c('DataKarenComplete/RawData/') # où sont les données envoyées par Karen 
+toCorrect <- c("DataKarenComplete/RawData/UP049RDN205G_CtrA0","DataKarenComplete/RawData/UP180RDN205G_CtrA0") # 2 fichiers que j'ai repérés pour lesquels les temps interimages n'étaient pas égaux? 
 
-toCorrect <- c("DataKarenComplete/RawData/UP049RDN205G_CtrA0","DataKarenComplete/RawData/UP180RDN205G_CtrA0")
 
-
-names_data <- list.files(where_data)
+names_data <- list.files(where_data) # liste les fichiers de Rdata
 Nbfiles <- length(names_data)
 all_directories <- paste0(where_data,names_data)
 for (i in 1:Nbfiles){
@@ -53,10 +68,9 @@ for (i in 1:length(names_data)){
   w <- paste0(where_data,names_data[i])
   where_plot <- paste0("DataKarenComplete/plotData/",gsub("\\..*","",names_data[i]),"_plotdata.png")
   load(w)
-  data.i
-  p <- plot_FN_all_data(data.i)
+  p <- plot_FN_all_data(data.i) ### plot_FN_all_data est une fonction adhoc pour tracer les données. p est un objet ggplot2 . 
   ggsave(where_plot)
-
+ 
 }
 
 ##############################################"
@@ -75,9 +89,11 @@ rownames(param_estim_UP) <- rownames(param_estim_DN) <- gsub("\\..*","",names_da
 names(echan_exp_corr_DN) <-names(echan_exp_corr_UP)<- gsub("\\..*","",names_data)
 colnames(param_estim_UP) <- paste0(c('lambda_ND','piTrunc_ND','lambda_c','mu_emg','sigma_emg','piTrunc_Read','lambda_e'),'_UP')
 colnames(param_estim_DN) <- paste0(c('lambda_ND','piTrunc_ND','lambda_c','mu_emg','sigma_emg','piTrunc_Read','lambda_e'),'_DN')
+
 for (i in 1:length(names_data)){
 
   print(names_data[i])
+
   load(paste0(where_data,names_data[i]))
   if(!is.null(data.i$Texp_UP)){
     resEstimUP <- estim_param_moment(data.i,'UP')
@@ -185,7 +201,7 @@ for (i in 1:length(names_data)){
     x <- seq(1,data.i$Tmax_Texp_UP)
     A <-  mean(data.i$Texp_UP==data.i$Tmax_Texp_UP)
     DUP <- as.data.frame(rep(x,3)); names(DUP) <- 't'
-    YExp <- (1-pemg(x,mu=param_estim_UP[i,4],sigma=param_estim_UP[i,5],lambda=param_estim_UP[i,3])
+    YExp <- 1-pemg(x,mu=param_estim_UP[i,4],sigma=param_estim_UP[i,5],lambda=param_estim_UP[i,3])
     Y <- 1-(1-FnTCtr(x))*YExp
     Y <- Y*(1-A)
     Y2 <-  1-(1-pExpCensored(x,lambda=param_estim_UP[i,1],piTrunc=param_estim_UP[i,2],Tmax = data.i$Tmax_Tctr_UP))*YExp

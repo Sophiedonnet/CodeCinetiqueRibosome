@@ -93,22 +93,22 @@ pemgCensored = function(x,mu, sigma,lambda,Tmax = Inf, piTrunc=0){
 #   }
 #}
 
-#----------------------------------------------------------------
-#----------- min(Exponentielle, Tmax)  : pdf
-#----------------------------------------------------------------
-pExpCensored = function(x,lambda,Tmax = Inf){
-  
-  return(pGammaCensored(x,1,lambda,Tmax))
-}
-
-
-#----------------------------------------------------------------
-#----------- min(Exponentielle, Tmax)  : pdf
-#----------------------------------------------------------------
-pExpCensored = function(x,lambda,Tmax = Inf){
-  
-  return(pGammaCensored(x,1,lambda,Tmax))
-}
+# #----------------------------------------------------------------
+# #----------- min(Exponentielle, Tmax)  : pdf
+# #----------------------------------------------------------------
+# pExpCensored = function(x,lambda,Tmax = Inf){
+#   
+#   return(pGammaCensored(x,1,lambda,Tmax))
+# }
+# 
+# 
+# #----------------------------------------------------------------
+# #----------- min(Exponentielle, Tmax)  : pdf
+# #----------------------------------------------------------------
+# pExpCensored = function(x,lambda,Tmax = Inf){
+#   
+#   return(pGammaCensored(x,1,lambda,Tmax))
+# }
 
 
 #----------------------------------------------------------------
@@ -152,12 +152,12 @@ demgCensored  = function(x,mu,sigma,lambda,Tmax = Inf,piTrunc=0,log = FALSE){
 
 
  
-#----------------------------------------------------------------
-#----------- min(Exponentielle, Tmax)  : densité
-#----------------------------------------------------------------
-dExpCensored = function(x,lambda,Tmax = Inf,log = FALSE){
-  return(dGammaCensored(x,1,lambda,Tmax,log=log))
-}
+# #----------------------------------------------------------------
+# #----------- min(Exponentielle, Tmax)  : densité
+# #----------------------------------------------------------------
+# dExpCensored = function(x,lambda,Tmax = Inf,log = FALSE){
+#   return(dGammaCensored(x,1,lambda,Tmax,log=log))
+# }
 
 
 #----------------------------------------------------------------
