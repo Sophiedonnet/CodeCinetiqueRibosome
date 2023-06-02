@@ -26,7 +26,7 @@ source('functionsMomentEstimations.R')
 
 # 
 where_data <- c('DataKarenComplete/RawData/') # où sont les données envoyées par Karen 
-toCorrect <- c("DataKarenComplete/RawData/UP049RDN205G_CtrA0","DataKarenComplete/RawData/UP180RDN205G_CtrA0") # 2 fichiers que j'ai repérés pour lesquels les temps interimages n'étaient pas égaux? 
+#toCorrect <- c("DataKarenComplete/RawData/UP049RDN205G_CtrA0","DataKarenComplete/RawData/UP180RDN205G_CtrA0") # 2 fichiers que j'ai repérés pour lesquels les temps interimages n'étaient pas égaux? 
 
 
 names_data <- list.files(where_data) # liste les fichiers de Rdata
@@ -39,10 +39,10 @@ for (i in 1:Nbfiles){
   names.i.1 <- paste0(all_directories[i],'/',names.i)
   data.i <- lapply(names.i.1,function(f){read.table(f, quote="\"", comment.char="")$V1})
   names(data.i)<- sapply(names.i,function(s){substr(s,1,7)})
-  if(all_directories[i] %in% toCorrect){
-    data.i$Tctr_DN  = data.i$Tctr_DN*2
-    data.i$Texp_DN  = data.i$Texp_DN*2
-  }
+#  if(all_directories[i] %in% toCorrect){
+#    data.i$Tctr_DN  = data.i$Tctr_DN*2
+#    data.i$Texp_DN  = data.i$Texp_DN*2
+#  }
   
   Tmax <- lapply(data.i,max)
   names(Tmax) <- paste0(rep('Tmax_',length(names(data.i))),names(data.i))
