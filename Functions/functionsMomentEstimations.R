@@ -127,9 +127,9 @@ plot_Fit_Ctr <- function(data,param_estim_UP,param_estim_DN,which.curve='pdf'){
       DT_UP <- as.data.frame(rep(t,2))
       names(DT_UP) = 't'
       DT_UP$Prob <- c(Y_UP,Fit_UP)
-      DT_UP$Curve <- paste('UP.', rep(c('Data','Fit'),each=length(t)) )
+      DT_UP$Curve <- paste('UP.', rep(c('Data','Fit Exp'),each=length(t)) )
       DT_UP$data <- 'UP'
-      DT_UP$type <- rep(c('Data','Fit'),each=length(t))
+      DT_UP$type <- rep(c('Data','Fit Exp'),each=length(t))
     }
   
     ################ DN

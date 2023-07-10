@@ -174,23 +174,6 @@ dminExpExpplusGaussian <- function(x,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_N
   # theta:  vector of 2 positive real number. Param of the gamma  distribution
   # output : vector of length x
   
-  return(dminGammaExpplusGaussian(x,lambda,mu,sigma,1,lambda_ND,Tmax,log=log))
-}
-
-#----------------------------------------------------------------
-#--------------------------  densité min(Gamma,Exponentially Modified Gaussian) 
-#-----------------------------------------------------------------
-# TV_LD ~ min( UV,VV) with UV ~ Exp(lamda_ND), VV ~ Exp(lambda) + N(mu,sigma)   
-dminGammaExpplusGaussian <- function(x,lambda,mu,sigma,alpha_ND,beta_ND,Tmax= Inf,log = FALSE){
-  
-  # x: vector of observations
-  # lambda: positive real number. Param of the exponential distribution
-  # mu:  real number. Mean of the gaussian
-  # sigma:  positive real number. SD of the gaussian
-  # theta:  vector of 2 positive real number. Param of the gamma  distribution
-  # output : vector of length x
-  
-  
   if(length(x) == 0){
     return(0)
   }else{
@@ -204,6 +187,34 @@ dminGammaExpplusGaussian <- function(x,lambda,mu,sigma,alpha_ND,beta_ND,Tmax= In
     return(y)
   }
 }
+
+#----------------------------------------------------------------
+#--------------------------  densité min(Gamma,Exponentially Modified Gaussian) 
+#-----------------------------------------------------------------
+# TV_LD ~ min( UV,VV) with UV ~ Exp(lamda_ND), VV ~ Exp(lambda) + N(mu,sigma)   
+# dminGammaExpplusGaussian <- function(x,lambda,mu,sigma,alpha_ND,beta_ND,Tmax= Inf,log = FALSE){
+#   
+#   # x: vector of observations
+#   # lambda: positive real number. Param of the exponential distribution
+#   # mu:  real number. Mean of the gaussian
+#   # sigma:  positive real number. SD of the gaussian
+#   # theta:  vector of 2 positive real number. Param of the gamma  distribution
+#   # output : vector of length x
+#   
+#   
+#   if(length(x) == 0){
+#     return(0)
+#   }else{
+#     F1z <- pemgCensored(x,mu=mu,sigma=sigma,lambda=lambda,Tmax,piTrunc)
+#     f1z <- demgCensored(x,mu=mu,sigma=sigma,lambda=lambda,Tmax,piTrunc)
+#     F2z <- pExpCensored(x,lambda_ND,Tmax,piTrunc_ND)
+#     f2z <- dExpCensored(x,lambda_ND,Tmax,piTrunc_ND)
+#     y <- f1z*(1-F2z) + f2z*(1-F1z)
+#     y[x==Tmax] = piTrunc * piTrunc_ND
+#     if(log){y <- log(y)}
+#     return(y)
+#   }
+# }
 
 #----------------------------------------------------------------
 #--------------------------  Probability distribution min(Gamma,EMG) 
@@ -314,11 +325,11 @@ dminExpExpplusGaussianwithQD <- function(x,mu,sigma,lambda,piTrunc,lambda_ND,piT
 #---------------------------------------------------------------------------------------------------
 #----------Density of  pi_QD Gamma() + (1-pi_QD)*min(Gamma,EMGamma)  
 #----------------------------------------------------------------------------------------------------
-rOurModelExp <- function(n,param,k,kprime,color='red',Tmax = Inf){
+rOurModelExp <- function(n,param,k,kprime,UPDN='DN',Tmax = Inf){
   
-  lambda_ND <- ifelse(color=='red',param[3],param[1])
-  piTrunc_ND <- ifelse(color=='red',param[4],param[2])
-  nbcodons <- ifelse(color=='red',k+kprime,k)
+  lambda_ND <- ifelse(UPDN=='UP',param[3],param[1])
+  piTrunc_ND <- ifelse(UPDN=='DN',param[4],param[2])
+  nbcodons <- ifelse(UPDN=='DN',k+kprime,k)
   lambda_c <- param[5]
   lambda_e <- param[6]
   piTrunc_Read <- param[7]
@@ -335,11 +346,11 @@ rOurModelExp <- function(n,param,k,kprime,color='red',Tmax = Inf){
 
 
 
-
-dOurModelExp <- function(x,param,k,kprime,color='red',Tmax = Inf,log = FALSE){
-  
-  # param = (lambda_ND_V,piTrunc_ND_V,lambda_ND_R,piTrunc_ND_R , lambda_c,lambda_e,piTrunc_Read, lambda_QD,pi_QD 
-  
+#################################################################### 
+dOurModelExp <- function(x,param,k,kprime,UPDN='DN',Tmax = Inf,log = FALSE){
+####################################################################  
+  # param = (lambda_ND_UP,piTrunc_ND_UP,lambda_ND_DN,piTrunc_ND_DN , lambda_c ,lambda_e , piTrunc_Read, lambda_QD,pi_QD) 
+   
   
   #: Param of the exponential distribution for the time to go to the ADN
   # k,kprime:  Param of the Gamma. Number of codon
@@ -347,9 +358,9 @@ dOurModelExp <- function(x,param,k,kprime,color='red',Tmax = Inf,log = FALSE){
   # output : vector of same length as x
   
   
-  lambda_ND <- ifelse(color=='red',param[3],param[1])
-  piTrunc_ND <- ifelse(color=='red',param[4],param[2])
-  nbcodons <- ifelse(color=='red',k+kprime,k)
+  lambda_ND <- ifelse(UPDN =='UP',param[1],param[3])
+  piTrunc_ND <- ifelse(UPDN =='DN',param[2],param[4])
+  nbcodons <- ifelse(UPDN == 'UP',k, k+kprime)
   
   
   lambda_c <- param[5]
@@ -362,6 +373,8 @@ dOurModelExp <- function(x,param,k,kprime,color='red',Tmax = Inf,log = FALSE){
   sigma=sqrt(nbcodons)/lambda_e
   
   f <- dminExpExpplusGaussianwithQD(x,mu,sigma,lambda_c,piTrunc_Read,lambda_ND,piTrunc_ND,pi_QD,lambda_QD,Tmax,log) 
+ 
+  
   return(f)
 } 
 
@@ -460,7 +473,7 @@ from_param_to_log_param <- function(param){
     log_param[,c(1,3,5,6,8)] <- log(param[,c(1,3,5,6,8)])
     log_param[,c(2,4,7,9)]<- logit(param[,c(2,4,7,9)])
   }
-  names(log_param) <- paste0(c('log_','logit_','log_','logit_','log_','log_','ogit_','log_','logit_'),names(param))
+  names(log_param) <- paste0(c('log_','logit_','log_','logit_','log_','log_','logit_','log_','logit_'),names(param))
   return(log_param)
 }
 #=============
@@ -484,26 +497,26 @@ from_logparam_to_param <- function(log_param){
 
 
 
-transfo_Gamma_Param <- function(mu,sigma){
-  #mu : mean
-  # sigma : sd
-  # output : moment matching alpha and beta parameters
-  beta <- mu/sigma^2
-  alpha <- mu*beta
-  return(c(alpha,beta))
-  
-}
+# transfo_Gamma_Param <- function(mu,sigma){
+#   #mu : mean
+#   # sigma : sd
+#   # output : moment matching alpha and beta parameters
+#   beta <- mu/sigma^2
+#   alpha <- mu*beta
+#   return(c(alpha,beta))
+#   
+# }
 
 #========================================================================
 #----------- Estimators of Gamma parameters
-#========================================================================
-estim_param_Gamma <- function(X){
-  EX <- mean(X)
-  VX <-var(X)
-  alpha_hat <- EX^2/VX
-  beta_hat <- alpha_hat/EX
-  return(c(alpha_hat,beta_hat))
-}
+# #========================================================================
+# estim_param_Gamma <- function(X){
+#   EX <- mean(X)
+#   VX <-var(X)
+#   alpha_hat <- EX^2/VX
+#   beta_hat <- alpha_hat/EX
+#   return(c(alpha_hat,beta_hat))
+# }
 
 
 #========================================================================

@@ -2,25 +2,25 @@
 my_mcmc_marg_onechain  = function(data,log_param_init,
                              hyperparams = list(),
                              paramsChains = list(nMCMC=50000,rho=1,nBurnin=1000,paramsToSample=c(1:9))){
-
-  #param_init : log(lambda_ND_R, lambda_ND_V, lambda_c,lambda_e,[log lambda_QD,pi_DQ])
+ 
   
-
-   
-  
+  # log_param_init : log(lambda_ND_UP) ,logit(piTrunc_ND_UP),log(lambda_ND_DN),logit(piTrunc_ND_DN), log(lambda_c), log(lambda_e), logit(piTrunc_Read), log(lambda_QD),logit(pi_QD))
   
    
 
   #---------------------------- Params to sample
   if(is.null(paramsChains$paramsToSample)){paramsChains$paramsToSample <- 1:9}
   whereRW <- whereToUpdate_marg(paramsChains$paramsToSample)
+  #----------------------------- Param fr kernel 
+  if( is.null(paramsChains$rho) ){paramsChains$rho <- rep(1,9)}
+  if( length(paramsChains$rho)==1 ){paramsChains$rho <- rep(paramsChains$rho,9)}
+  
   
   #--------------------- INIT and Stockage
   myPostSample <- matrix(0,paramsChains$nMCMC-paramsChains$nBurnin,9) 
   log_param <- log_param_init
-   
-  LL <- log_lik_marg(log_param,data)
   logprior <- log_prior_marg(log_param,hyperparams,whereRW) 
+  LL <- log_lik_marg(log_param,data)
   
   
   for (i in 1:paramsChains$nMCMC){
@@ -32,8 +32,8 @@ my_mcmc_marg_onechain  = function(data,log_param_init,
     #-------------------------------------------------------------
     if(length(whereRW)>0){
       log_param_c <- log_param 
-      w = sample(whereRW,1) 
-      s <- sample(c(0.01,0.1,1),1)*paramsChains$rho
+      w <- sample(whereRW,1) 
+      s <- sample(c(0.01,0.1,1),1)*paramsChains$rho[w]
       log_param_c[w] <- log_param[w] + rnorm(1,0,s[w])
       logprior_c <- log_prior_marg(log_param_c,hyperparams,whereRW)
       #if(logprior_c!=-Inf){
@@ -72,8 +72,6 @@ whereToUpdate_marg = function(vect){
   oneParam <- (length(myvect)==1)
   if (oneParam){
     myvect = c(myvect,myvect)
-  }else{
-    
   }
   return(myvect)
   
@@ -84,40 +82,33 @@ whereToUpdate_marg = function(vect){
 #========================================================================
 log_lik_marg <- function(log_param,data){
   
-  # log_param: log(lambda_ND_V),log(lambda_ND_R), log(lambda_c),log(lambda_e) [log(lambda_QD) pi_QD]
-  
+  # log_param : log(lambda_ND_UP) ,logit(piTrunc_ND_UP),log(lambda_ND_DN),logit(piTrunc_ND_DN), log(lambda_c), log(lambda_e), logit(piTrunc_Read), log(lambda_QD),logit(pi_QD))
 
   param <- from_logparam_to_param(log_param)
   
-  d = 0
-  
-  
-  #-----------------------------Data controle Vertes---------
-  d1 <- dExpCensored(data$T_Contr_V, lambda = param[1], Tmax = data$Tmax_Contr_V,piTrunc = param[2],log  = TRUE)
-  d  <- sum(d1)
-  
-  #-----------------------------Data controle Rouges---------
-  d2 <- dExpCensored(data$T_Contr_R, lambda = param[3],Tmax = data$Tmax_Contr_R,piTrunc = param[4],log  = TRUE)
-  d  <- d + sum(d2)
-  #------------------------------Data Exp Green---------
-  d3 <- dOurModelExp(data$T_Exp_V,param,data$k,data$kprime,color='green',Tmax = data$Tmax_Exp_V,log = TRUE) 
-  d <- d  + sum(d3)
-  #------------------------------Data Exp Red ---------
-  d4 <- dOurModelExp(data$T_Exp_R,param,data$k,data$kprime,color='red',Tmax = data$Tmax_Exp_R,log = TRUE) 
-  d <- d  + sum(d4)
-  
+  #-----------------------------Data controle  UP ---------
+  d1 <- dExpCensored(data$Tctr_UP, lambda = param[1], Tmax = data$Tmax_Tctr_UP,piTrunc = param[2],log  = TRUE)
+ 
+  #-----------------------------Data controle DN ---------
+  d2 <- dExpCensored(data$Tctr_DN, lambda = param[3],Tmax = data$Tmax_Tctr_DN,piTrunc = param[4],log  = TRUE)
+  #------------------------------Data Exp UP ---------
+  d3 <- dOurModelExp(data$Texp_UP,param,data$k,data$kprime,UPDN ='UP',Tmax = data$Tmax_Texp_UP,log = TRUE) 
+  #------------------------------Data Exp DN ---------
+  d4 <- dOurModelExp(data$Texp_DN,param,data$k,data$kprime,UPDN='DN',Tmax = data$Tmax_Texp_DN,log = TRUE) 
+ 
+  res <- sum(d1) + sum(d2) + sum(d3) + sum(d4) 
   return(d)
 }
 
 #========================================================================
-log_prior_marg = function(log_param,hyperparams,w){
+log_prior_marg = function(log_param,hyperparams,whereRW){
   #========================================================================
  
   if('mean' %in% names(hyperparams)){
-    d <- sum(dnorm(log_param[w] , hyperparams$mean[w], hyperparams$sd[w],log = TRUE))
+    d <- sum(dnorm(log_param[whereRW] , hyperparams$mean[whereRW], hyperparams$sd[whereRW],log = TRUE))
   }
   if('upperbound' %in% names(hyperparams)){
-    d <- sum(dunif(log_param[w], hyperparams$lowerbound[w], hyperparams$upperbound[w],log = TRUE))
+    d <- sum(dunif(log_param[whereRW], hyperparams$lowerbound[whereRW], hyperparams$upperbound[whereRW],log = TRUE))
   }
   return(d)
 }
