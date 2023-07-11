@@ -23,9 +23,9 @@ my_mcmc_marg_onechain  = function(data,log_param_init,
   LL <- log_lik_marg(log_param,data)
   
   
-  for (i in 1:paramsChains$nMCMC){
+  for (iter in 1:paramsChains$nMCMC){
     
-    if(i%%1000==0){print(paste0('Iteration ', i))}
+    if(iter%%1000==0){print(paste0('Iteration ', iter))}
     
     #-------------------------------------------------------------
     # log(lambda_ND_R, lambda_ND_V, lambda_c,lambda_e,log lambda_QD ,logit
@@ -33,22 +33,23 @@ my_mcmc_marg_onechain  = function(data,log_param_init,
     if(length(whereRW)>0){
       log_param_c <- log_param 
       w <- sample(whereRW,1) 
-      s <- sample(c(0.01,0.1,1),1)*paramsChains$rho[w]
-      log_param_c[w] <- log_param[w] + rnorm(1,0,s[w])
+      sw <- sample(c(0.01,0.1,1),1)*paramsChains$rho[w]
+      log_param_c[w] <- log_param[w] + rnorm(1,0,sw)
       logprior_c <- log_prior_marg(log_param_c,hyperparams,whereRW)
-      #if(logprior_c!=-Inf){
+      if(logprior_c!=-Inf){
         LL_c <- log_lik_marg(log_param_c,data)
         alpha <- LL_c + logprior_c - LL - logprior
         if (log(runif(1))<alpha){
           log_param <- log_param_c
           LL <- LL_c
           logprior <-  logprior_c 
+          #print('accept')
         }
-      #}
+      }
     }
     
     
-    if(i>paramsChains$nBurnin){myPostSample[i-paramsChains$nBurnin,] = log_param}
+    if(iter>paramsChains$nBurnin){myPostSample[iter-paramsChains$nBurnin,] = log_param}
   }
   
 
@@ -68,9 +69,8 @@ my_mcmc_marg_onechain  = function(data,log_param_init,
 #================================================================
 whereToUpdate_marg = function(vect){
   
-  myvect = vect
-  oneParam <- (length(myvect)==1)
-  if (oneParam){
+  myvect <- vect
+  if (length(myvect)==1){
     myvect = c(myvect,myvect)
   }
   return(myvect)
@@ -97,7 +97,7 @@ log_lik_marg <- function(log_param,data){
   d4 <- dOurModelExp(data$Texp_DN,param,data$k,data$kprime,UPDN='DN',Tmax = data$Tmax_Texp_DN,log = TRUE) 
  
   res <- sum(d1) + sum(d2) + sum(d3) + sum(d4) 
-  return(d)
+  return(res)
 }
 
 #========================================================================

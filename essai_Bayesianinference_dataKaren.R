@@ -72,7 +72,7 @@ hist(mydata_Contr$T_Contr_R,nclass=50,freq = FALSE,main="Natural Death. RED")
 ################################# ESTIM Contrôle Data 
 ##########################################################################
 
-paramsChains = list(nMCMC=20000,rho=rep(1,9))
+paramsChains = list(nMCMC=20000,rho=rep(1,7))
 paramsChains$nBurnin <- paramsChains$nMCMC/10
 paramsChains$paramsToSample = c(1:4) #
 
