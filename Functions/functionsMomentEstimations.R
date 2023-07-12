@@ -43,11 +43,11 @@ estim_param_moment <- function(data,UP.or.DN = 'UP'){
     theta_hat <- estim_param_emg(Echan[Echan<TUpperBound])
     TUpperBound <- TUpperBound-10
   }
-  param[3] <- theta_hat[3]
-  param[4] <- theta_hat[1]
-  param[5] <- theta_hat[2]
+  param[3] <- theta_hat[3] # lambda_e 
+  param[4] <- theta_hat[1] # mu
+  param[5] <- theta_hat[2] # sigma
   param[6] <- mean(Texp == Tmax_Texp)/param[2]
-  param[7] <- ifelse(UP.or.DN == 'UP', data.i$k,data.i$kprime + data.i$k)/param[4]
+  param[7] <- ifelse(UP.or.DN == 'UP', data$k,data$kprime + data$k)/param[4]
   
   return(list(param_estim = param, echan_exp_corr = Echan))
 }  

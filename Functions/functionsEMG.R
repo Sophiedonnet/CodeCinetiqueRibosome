@@ -219,19 +219,19 @@ dminExpExpplusGaussian <- function(x,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_N
 #----------------------------------------------------------------
 #--------------------------  Probability distribution min(Gamma,EMG) 
 #----------------------------------------------------------------
-
-# TV  ~ min( UV,VV) with UV ~ Gamma(theta[1], theta[2]), VV ~ Exp(lambda) + N(mu,sigma)   
-pminGammaExpplusGaussian <- function(x,lambda,mu,sigma,alpha_ND,beta_ND){
-  # x: vector of real number
-  # lambda: positive real number. Param of the exponential distribution
-  # mu:  real number. Mean of the gaussian
-  # sigma:  positive real number. SD of the gaussian
-  # theta:  vector of 2 positive real number. Param of the gamma  distribution
-  # output : vector of length x
-  F1z <- pemg(x,lambda = lambda,mu = mu, sigma = sigma)
-  F2z <- pgamma(x,alpha_ND,beta_ND)
-  1-(1-F1z)*(1-F2z)
-}
+# 
+# # TV  ~ min( UV,VV) with UV ~ Gamma(theta[1], theta[2]), VV ~ Exp(lambda) + N(mu,sigma)   
+# pminGammaExpplusGaussian <- function(x,lambda,mu,sigma,alpha_ND,beta_ND){
+#   # x: vector of real number
+#   # lambda: positive real number. Param of the exponential distribution
+#   # mu:  real number. Mean of the gaussian
+#   # sigma:  positive real number. SD of the gaussian
+#   # theta:  vector of 2 positive real number. Param of the gamma  distribution
+#   # output : vector of length x
+#   F1z <- pemg(x,lambda = lambda,mu = mu, sigma = sigma)
+#   F2z <- pgamma(x,alpha_ND,beta_ND)
+#   1-(1-F1z)*(1-F2z)
+# }
 
 #----------------------------------------------------------------
 #--------------------------  Probability distribution min(Gamma,EMG) 
@@ -275,8 +275,9 @@ pminExpExpplusGaussian <- function(x,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_N
 
 rminExpExpplusGaussian <- function(n,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_ND,Tmax){
   
-  U <- rExpCensored(n,lambda_ND,Tmax,piTrunc_ND)    # mort naturelle lente
-  V <- remgCensored(n,mu, sigma, lambda=lambda,Tmax,piTrunc) # extinction by reading
+   
+  U <- rExpCensored(n,lambda_ND,Tmax = Tmax,piTrunc_ND)    # mort naturelle lente
+  V <- remgCensored(n,mu, sigma, lambda=lambda,Tmax = Tmax,piTrunc) # extinction by reading
   Y <- apply(cbind(U,V),1,min)
   return(Y)
 }
@@ -286,159 +287,101 @@ rminExpExpplusGaussian <- function(n,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_N
 #---------------------------------------------------------------------------------------------------
 #----------Simulation of a sample from  pi_QD Gamma() + (1-pi_QD)*min(Exp,Exp+Gaussian)  
 #----------------------------------------------------------------------------------------------------
+# 
+# rminExpExpplusGaussianwithQD <- function(n,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_ND,pi_QD,lambda_QD,Tmax){
+#   
+#   # n: number of simulation 
+#   # output : vector of length n
+#   Z_QD <- sample(c(1,0),n,replace=TRUE,prob = c(pi_QD, 1-pi_QD)) 
+#   T_QD <- rexp(n,lambda_QD)
+#   T_LD <- rminExpExpplusGaussian(n,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_ND,Tmax)
+#   Y <- Z_QD * T_QD  + (1-Z_QD)*T_LD
+#   return(list(Y = Y,Z  = Z_QD))
+# }
 
-rminExpExpplusGaussianwithQD <- function(n,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_ND,pi_QD,lambda_QD,Tmax){
-  
-  # n: number of simulation 
-  # output : vector of length n
-  Z_QD <- sample(c(1,0),n,replace=TRUE,prob = c(pi_QD, 1-pi_QD)) 
-  T_QD <- rexp(n,lambda_QD)
-  T_LD <- rminExpExpplusGaussian(n,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_ND,Tmax)
-  Y <- Z_QD * T_QD  + (1-Z_QD)*T_LD
-  return(list(Y = Y,Z  = Z_QD))
-}
-
-#---------------------------------------------------------------------------------------------------
-#----------density of a sample from  pi_QD Gamma() + (1-pi_QD)*min(Exp,Exp+Gaussian)  
-#----------------------------------------------------------------------------------------------------
-
-dminExpExpplusGaussianwithQD <- function(x,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_ND,pi_QD,lambda_QD,Tmax,log = FALSE){
-  
-  # x: values 
-  # output : vector of length n
-  if(length(x) == 0){
-    return(0)
-  }else{
-    if(pi_QD>0){
-      d_QD <- dexp(x,lambda_QD)
-      d_LD <- dminExpExpplusGaussian(x,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_ND,Tmax)
-      y <- pi_QD* d_QD  + (1-pi_QD)*d_LD
-      if(log){y <- log(y)}
-      }else{
-      y <- dminExpExpplusGaussian(x,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_ND,Tmax,log)
-    }
-    return(y)
-  }
-  
-}
+# #---------------------------------------------------------------------------------------------------
+# #----------density of a sample from  pi_QD Gamma() + (1-pi_QD)*min(Exp,Exp+Gaussian)  
+# #----------------------------------------------------------------------------------------------------
+# 
+# dminExpExpplusGaussianwithQD <- function(x,mu,sigma,lambda_c,piTrunc,lambda_ND,piTrunc_ND,pi_QD,lambda_QD,Tmax,log = FALSE){
+#   
+#   # x: values 
+#   # output : vector of length n
+#   if(length(x) == 0){
+#     return(0)
+#   }else{
+#     if(pi_QD>0){
+#       d_QD <- dexp(x,lambda_QD)
+#       d_LD <- dminExpExpplusGaussian(x,mu,sigma,lambda_c,piTrunc,lambda_ND,piTrunc_ND,Tmax)
+#       y <- pi_QD* d_QD  + (1-pi_QD)*d_LD
+#       if(log){y <- log(y)}
+#       }else{
+#       y <- dminExpExpplusGaussian(x,mu,sigma,lambda_c,piTrunc,lambda_ND,piTrunc_ND,Tmax,log)
+#     }
+#     return(y)
+#   }
+#   
+# }
 
 #---------------------------------------------------------------------------------------------------
 #----------Density of  pi_QD Gamma() + (1-pi_QD)*min(Gamma,EMGamma)  
-#----------------------------------------------------------------------------------------------------
-rOurModelExp <- function(n,param,k,kprime,UPDN='DN',Tmax = Inf){
-  
-  lambda_ND <- ifelse(UPDN=='UP',param[3],param[1])
-  piTrunc_ND <- ifelse(UPDN=='DN',param[4],param[2])
-  nbcodons <- ifelse(UPDN=='DN',k+kprime,k)
-  lambda_c <- param[5]
-  lambda_e <- param[6]
-  piTrunc_Read <- param[7]
-  lambda_QD <- param[8]
-  pi_QD <- param[9]
-  
-  mu= nbcodons/lambda_e
-  sigma=sqrt(nbcodons)/lambda_e
-  
-  E <- rminExpExpplusGaussianwithQD(n,mu,sigma,lambda_c,piTrunc_Read,lambda_ND,piTrunc_ND,pi_QD,lambda_QD,Tmax) 
-  
-  return(E)
-}
-
-
-
-#################################################################### 
-dOurModelExp <- function(x,param,k,kprime,UPDN='DN',Tmax = Inf,log = FALSE){
-####################################################################  
-  # param = (lambda_ND_UP,piTrunc_ND_UP,lambda_ND_DN,piTrunc_ND_DN , lambda_c ,lambda_e , piTrunc_Read, lambda_QD,pi_QD) 
-   
-  
-  #: Param of the exponential distribution for the time to go to the ADN
-  # k,kprime:  Param of the Gamma. Number of codon
-  # Tmax : truncature of data
-  # output : vector of same length as x
-  
-  
-  lambda_ND <- ifelse(UPDN =='UP',param[1],param[3])
-  piTrunc_ND <- ifelse(UPDN =='DN',param[2],param[4])
-  nbcodons <- ifelse(UPDN == 'UP',k, k+kprime)
-  
-  
-  lambda_c <- param[5]
-  lambda_e <- param[6]
-  piTrunc_Read <- param[7]
-  lambda_QD <- param[8]
-  pi_QD <- param[9]
-  
-  mu= nbcodons/lambda_e
-  sigma=sqrt(nbcodons)/lambda_e
-  
-  f <- dminExpExpplusGaussianwithQD(x,mu,sigma,lambda_c,piTrunc_Read,lambda_ND,piTrunc_ND,pi_QD,lambda_QD,Tmax,log) 
- 
-  
-  return(f)
-} 
-
-# #========================================================================
-# #----------------- Likelihood (TV, TR,ZR,ZV)
-# #========================================================================
-# log_lik <- function(log_param,data,ZQD){
-# 
-#   # log_param: log(lambda_ND_V),log(lambda_ND_R), log(lambda_c),log(lambda_e), log(lambda_QD) pi_QD
-# 
-#   Tmax <- data$Tmax
-#   k <- data$k
-#   kprime <- data$kprime
+# #----------------------------------------------------------------------------------------------------
+# rOurModelExp <- function(n,param,k,kprime,UPDN='DN',Tmax = Inf){
 #   
-# 
-#   d = 0
-#   #--------------------------------------
-#   lambda_ND_V <- exp(log_param[1])
+#   lambda_ND <- ifelse(UPDN=='UP',param[3],param[1])
+#   piTrunc_ND <- ifelse(UPDN=='DN',param[4],param[2])
+#   nbcodons <- ifelse(UPDN=='DN',k+kprime,k)
+#   lambda_c <- param[5]
+#   lambda_e <- param[6]
+#   piTrunc_Read <- param[7]
+#   lambda_QD <- param[8]
+#   pi_QD <- param[9]
+#   
+#   mu= nbcodons/lambda_e
+#   sigma=sqrt(nbcodons)/lambda_e
+#   
+#   E <- rminExpExpplusGaussian(n,mu,sigma,lambda_c,piTrunc_Read,lambda_ND,piTrunc_ND,Tmax) 
+#   
+#   return(E)
+# }
+
+
+
+# #################################################################### 
+# dOurModelExp <- function(x,param,k,kprime,UPDN='DN',Tmax = Inf,log = FALSE){
+# ####################################################################  
+#   # param = (lambda_ND_UP,piTrunc_ND_UP,lambda_ND_DN,piTrunc_ND_DN , lambda_c ,lambda_e , piTrunc_Read, lambda_QD,pi_QD) 
+#    
+#   
+#   #: Param of the exponential distribution for the time to go to the ADN
+#   # k,kprime:  Param of the Gamma. Number of codon
+#   # Tmax : truncature of data
+#   # output : vector of same length as x
+#   
+#   
+#   lambda_ND <- ifelse(UPDN =='UP',param[1],param[3])
+#   piTrunc_ND <- ifelse(UPDN =='DN',param[2],param[4])
+#   nbcodons <- ifelse(UPDN == 'UP',k, k+kprime)
+#   
+#   
+#   lambda_c <- param[5]
+#   lambda_e <- param[6]
+#   piTrunc_Read <- param[7]
+#   lambda_QD <- param[8]
+#   pi_QD <- param[9]
+#   
+#   mu= nbcodons/lambda_e
+#   sigma=sqrt(nbcodons)/lambda_e
+#   
+#   f <- dminExpExpplusGaussian(x,mu,sigma,lambda_c,piTrunc_Read,lambda_ND,piTrunc_ND,Tmax,log) 
 #  
 #   
-#   lambda_ND_R <- exp(log_param[2])
-#   lambda_c <- exp(log_param[3])
-#   lambda_e <- exp(log_param[4])      
-#   lambda_QD <- exp(log_param[5])
-#   #--------------------------------------
-#   d1 <- dExpCensored(data$T_Contr_V, lambda_ND_V,Tmax,log  = TRUE)
-#   d  <- sum(d1)
-# 
-#   #--------------------------------------
-#   d2 <- dExpCensored(data$T_Contr_R, lambda_ND_R,Tmax,log  = TRUE)
-#   d  <- d + sum(d2)
-#   #--------------------------------------
-#   ZV <- Z$ZV
-#   mu_V <- k/lambda_e
-#   sigma_V <- sqrt(k)/lambda_e
-#   U3_NQD <- dminExpExpplusGaussian(data$T_Exp_V[ZV==0], lambda = lambda_c,mu = mu_V,sigma = sigma_V,lambda_ND_V,Tmax,log = TRUE)
-#   d <- d + sum(U3_NQD)
-#   U3_QD <- dExpCensored(data$T_Exp_V[ZV==1],lambda_QD,Tmax,log=TRUE)
-#   d <- d  + sum(U3_QD)
-#   #--------------------------------------
-#   
-#   ZR <- Z$ZR
-#   mu_R <- (k+kprime)/lambda_e
-#   sigma_R <- sqrt(k+kprime)/lambda_e
-#   U4_NQD <-  dminExpExpplusGaussian(data$T_Exp_R[ZR==0], lambda = lambda_c,mu = mu_R,sigma = sigma_R,lambda_ND_R,Tmax,log = TRUE)
-#   d <- d + sum(U4_NQD) 
-#   U4_QD <- dExpCensored(data$T_Exp_R[ZR==1],lambda_QD,Tmax,log=TRUE)
-#   d <- d + sum(U4_QD)
-#   
-#   return(d)
-# }
-# 
-# #========================================================================
-# log_prior = function(log_param,hyperparams,withQD){
-# #========================================================================
-#   if('mean' %in% names(hyperparams)){
-#     d <- sum(dnorm(log_param[1:(4+withQD)], hyperparams$mean[1:(4+withQD)], hyperparams$sd[1:(4+withQD)],log = TRUE))
-#   }
-#   if('upperbound' %in% names(hyperparams)){
-#   d <- sum(dunif(log_param[1:(4+withQD)], hyperparams$lowerbound[1:(4+withQD)], hyperparams$upperbound[1:(4+withQD)],log = TRUE))
-#   }
-#   return(d)
-# }
+#   return(f)
+# } 
 
+
+#################################################################################"
+################################################################################ 
 
 #=====================================================================
 #Logit et invlogit , from_log_param_to_param and inverse
@@ -494,6 +437,8 @@ from_logparam_to_param <- function(log_param){
   return(param)
 }
 #=============
+
+
 
 
 

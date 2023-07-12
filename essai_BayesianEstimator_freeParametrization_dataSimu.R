@@ -23,7 +23,7 @@ source('Functions/myMCMC_marg_freeParametrization.R')
 source('Functions/functionsLikelihood_freeParametrization.R')
 
 ##################################################
-################ Load formatted data
+################ Data simulation
 ###################################################
 
 # 
@@ -32,90 +32,95 @@ names_data <- list.files(where_data) # liste les fichiers de Rdata
 Nbfiles <- length(names_data)
 all_directories <- paste0(where_data,names_data)
 
-##############################################"
-###############" MCMC Estimation starting from moment estimator
-############################################
+
 
 load('DataKarenComplete/resEstim/res_EstimMoment_allData.Rdata')
-  
-paramsChains <- list(nMCMC=1000,rho=1,nBurnin=1,paramsToSample=c(1:11))
-hyperparams <- list(mean=rep(0,11) ,sd = rep(3,11))
 
 
-for (d in 1:length(names_data)){
+d = 1; 
+load(paste0(where_data,names_data[d]))
+data.d <- data.i
+data.sim <- data.d
   
-  load(paste0(where_data,names_data[d]))
-  data.d <- data.i
-  data.d$Texp_DN <- NULL
-  data.d$Texp_UP <- NULL
-  
-  #-------------- " init MCMC
 
-  param_init.d <- rep(0,11)
-  param_init.d[c(1,2)] <- param_estim_UP_all[d,c(1,2)] # lambda_ND_UP ,piTrunc_ND_UP
-  param_init.d[c(3,4)] <- param_estim_DN_all[d,c(1,2)] # # lambda_ND_DN ,piTrunc_ND_DN
-  param_init.d[5] <- 0.5*(param_estim_UP_all[d,3] + param_estim_DN_all[d,3]) # lambda_c
-  param_init.d[c(6,7,8)] <- param_estim_UP_all[d,c(4,5,6)]  # mu_e_UP, sigma_e_UP, piTrunc_Read_UP
-  param_init.d[c(9,10,11)] <- param_estim_DN_all[d,c(4,5,6)]  # mu_e_DN, sigma_e_DN, piTrunc_Read_DN
+param_sim <- rep(0,11)
+param_sim[c(1,2)] <- param_estim_UP_all[d,c(1,2)] # lambda_ND_UP ,piTrunc_ND_UP
+param_sim[c(3,4)] <- param_estim_DN_all[d,c(1,2)] # # lambda_ND_DN ,piTrunc_ND_DN
+param_sim[5] <- 0.5*(param_estim_UP_all[d,3] + param_estim_DN_all[d,3]) # lambda_c
+param_sim[c(6,7,8)] <- param_estim_UP_all[d,c(4,5,6)]  # mu_e_UP, sigma_e_UP, piTrunc_Read_UP
+param_sim[8] = param_estim_UP_all[d,6]/2
+param_sim[c(9,10,11)] <- param_estim_DN_all[d,c(4,5,6)]  # mu_e_DN, sigma_e_DN, piTrunc_Read_DN
+param_sim[11] = param_estim_DN_all[d,6]/2
+names(param_sim) <- c("lambda_ND_UP", "piTrunc_ND_UP", 
+                         "lambda_ND_DN" , "piTrunc_ND_DN", 
+                         "lambda_c", 
+                         "mu_e_UP" , "sigma_e_UP", "piTrunc_Read_UP", 
+                         "mu_e_DN" , "sigma_e_DN", "piTrunc_Read_DN")
 
-  names(param_init.d) <- c("lambda_ND_UP", "piTrunc_ND_UP", 
-                           "lambda_ND_DN" , "piTrunc_ND_DN", 
-                           "lambda_c", 
-                           "mu_e_UP" , "sigma_e_UP", "piTrunc_Read_UP", 
-                           "mu_e_DN" , "sigma_e_DN", "piTrunc_Read_DN")
-  log_param_init.d <- from_param_to_log_param_freeParametrization(param_init.d)
+fact.ndata  = 10
+data.sim$Texp_UP <- rOurModelExp_freeParametrization(n = length(data.d$Texp_UP)*fact.ndata,param= param_sim,UPDN='UP',Tmax = data.d$Tmax_Texp_UP)
+data.sim$Texp_DN <- rOurModelExp_freeParametrization(n = length(data.d$Texp_DN)*fact.ndata,param= param_sim,UPDN='DN',Tmax = data.d$Tmax_Texp_DN)
+data.sim$Tctr_UP <- rExpCensored(n = length(data.d$Tctr_UP)*fact.ndata,lambda = param_sim[1],Tmax = data.d$Tmax_Tctr_UP, piTrunc=param_sim[2])
+data.sim$Tctr_DN <- rExpCensored(n = length(data.d$Tctr_DN)*fact.ndata,lambda = param_sim[3],Tmax = data.d$Tmax_Tctr_DN, piTrunc=param_sim[4])
+
+log_param_sim <- from_param_to_log_param_freeParametrization(param_sim)
+############################################# 
+resEstimUP <- estim_param_moment(data.sim,'UP')$param_estim
+resEstimDN <- estim_param_moment(data.sim,'DN')$param_estim
+
+param_estim_moment <- rep(0,11)
+param_estim_moment[c(1,2)] <- resEstimUP[c(1,2)]
+param_estim_moment[c(3,4)] <- resEstimDN[c(1,2)]
+param_estim_moment[5] <-  0.5*(resEstimUP[3] + resEstimDN[3])
+param_estim_moment[c(6,7,8)] <- resEstimUP[c(4,5,6)]
+param_estim_moment[c(9,10,11)] <- resEstimDN[c(4,5,6)]
+names(param_estim_moment) <- names(param_sim)
+
+rbind(param_sim,param_estim_moment)
+
   
-  # param 
-  #   1 - "lambda_ND_UP"    
-  #   2 - "piTrunc_ND_UP"   
-  #   3 - "lambda_ND_DN"
-  #   4 - "piTrunc_ND_DN"
-  #   5-  "lambda_c"
-  #   6 - "mu_e_UP" 
-  #   7 - "sigma_e_UP"
-  #   8 - "piTrunc_Read_UP"
-  #   9 - "mu_e_DN" 
-  #   10 - "sigma_e_DN"
-  #   11 - "piTrunc_Read_DN"
-  
-  
-  
-  #--------------- run MCMC
-  resMCMC <- my_mcmc_marg_freeParametrization(data.d,log_param_init.d,
+
+##############################################"
+###############" MCMC Estimation starting from moment estimator
+############################################ 
+#--------------- run MCMC
+
+
+log_param_init <- log_param_estim_moment <- from_param_to_log_param_freeParametrization(param_estim_moment)
+param_init <- param_estim_moment
+nbParam <- length(log_param_init)
+paramsChains <- list(nMCMC=1000,rho=rep(1,nbParam),nBurnin=1,paramsToSample=c(1,2,3,4,5,6,7,9,10))
+paramsChains$rho[c(6,9)] <- 5
+log_param_init[-paramsChains$paramsToSample] <- from_param_to_log_param_freeParametrization(param_sim)[-paramsChains$paramsToSample]
+hyperparams <- list(mean=rep(0,nbParam) ,sd = rep(3,nbParam))
+resMCMC <- my_mcmc_marg_freeParametrization(data.sim,log_param_init,
                                                hyperparams = hyperparams,
                                                paramsChains = paramsChains)
   
-  thinning <- 2
-  extr <- seq(1,paramsChains$nMCMC)
-  par(mfrow=c(3,4))
-  for (p in 1:11){
-    plot(resMCMC$myPostSample[extr,p],type='l',main=names(param_init.d)[p],ylab = '',xlab = 'iter'); abline(h=param_init.d[p],col='red',lwd=2)  
-  }
-  
-
-
-  
-  
-  plot(resMCMC$myPostSample[extr,5],type='l',main='lambda_ND_UP'); abline(h=c(param_estim_UP_all[i,3],param_estim_DN_all[i,3]),col='red',lwd=2)  
-  plot(resMCMC$myPostSample[extr,6],type='l',main='lambda_ND_UP'); abline(h=c(param_estim_UP_all[i,7],param_estim_DN_all[i,7]),col='red',lwd=2)  
-  
-  
-  
-  plot(resMCMC$myPostSample[,2],type='l',main='pi_trunc_ND_UP'); abline(h=param_estim_UP_all[i,2],col='red',lwd=2)  
-  acf(resMCMC$myPostSample[,2])
-  
-  plot(resMCMC$myPostSample[,3],type='l',main='lambda_ND_DN'); abline(h=param_estim_DN_all[i,1],col='red',lwd=2)  
-  acf(resMCMC$myPostSample[,3])
-  
-  plot(resMCMC$myPostSample[,4],type='l',main='pi_trunc_ND_DN'); abline(h=param_estim_DN_all[i,2],col='red',lwd=2)  
-  acf(resMCMC$myPostSample[,4])
-  
-  plot(density(extr))    
-  
-  
-  #--------------- save res  
+ thinning <- 1
+burnin <- 0
+extr <- seq(1,paramsChains$nMCMC-burnin,by=thinning)
+par(mfrow=c(4,3))
+for (p in c(6,7,8,9,10,11,1,2,3,4,5)){
+  U <- resMCMC$myLogPostSample[extr,p]
+  plot(resMCMC$myLogPostSample[extr,p],type='l',main=names(log_param_sim)[p],ylab = '',xlab = 'iter',ylim=range(c(U,log_param_sim[p],log_param_estim_moment[p]))); 
+  abline(h=log_param_sim[p],col='red',lwd=2)  
+  abline(h=log_param_estim_moment[p],col='green',lwd=2,lty=2)  
+  abline(h=log_param_init[p],col='magenta',lwd=2,lty=2)  
   
 }
+
+par(mfrow=c(4,3))
+for (p in c(6,7,8,9,10,11,1,2,3,4,5)){
+  U <- resMCMC$myPostSample[extr,p]
+  plot(resMCMC$myPostSample[extr,p],type='l',main=names(param_sim)[p],ylab = '',xlab = 'iter',ylim=range(c(U,param_sim[p],param_estim_moment[p]))); 
+  abline(h=param_sim[p],col='red',lwd=2)  
+  abline(h=param_estim_moment[p],col='green',lwd=2,lty=2)  
+}
+
+
+
+  
 ##############################################"
 ###############" PLOT fit Exp distri to  data Ctr
 #############################################

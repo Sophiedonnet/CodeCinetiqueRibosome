@@ -1,5 +1,4 @@
-
-my_mcmc_marg_onechain  = function(data,log_param_init,
+my_mcmc_marg  = function(data,log_param_init,
                              hyperparams = list(),
                              paramsChains = list(nMCMC=50000,rho=1,nBurnin=1000,paramsToSample=c(1:9))){
  
