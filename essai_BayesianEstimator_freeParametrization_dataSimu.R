@@ -18,9 +18,9 @@ library(emg)
 source('Functions/functionsEMG.R')
 source('Functions/functionsMomentEstimations.R')
 source('Functions/functionsPlotPostInference.R')
-source('Functions/myMCMC_marg_freeParametrization.R')
-source('Functions/functionsLikelihood_freeParametrization.R')
-
+#source('Functions/myMCMC_marg_freeParametrization.R')
+#source('Functions/functionsLikelihood_freeParametrization.R')
+source('Functions/myMCMC_marg_constMu.R')
 ##################################################
 ################ Data simulation
 ###################################################
@@ -42,42 +42,52 @@ data.d <- data.i
 data.sim <- data.d
   
 
-param_sim <- rep(0,11)
+param_sim <- rep(0,12)
+names(param_sim) <- c("lambda_ND_UP", "piTrunc_ND_UP", 
+                      "lambda_ND_DN" , "piTrunc_ND_DN", 
+                      "lambda_c", 
+                      "mu_e_UP" , "sigma_e_UP", "piTrunc_Read_UP", 
+                      "mu_e_DN" , "sigma_e_DN", "piTrunc_Read_DN",
+                      "lambda_e")
+
 param_sim[c(1,2)] <- param_estim_UP_all[d,c(1,2)] # lambda_ND_UP ,piTrunc_ND_UP
 param_sim[c(3,4)] <- param_estim_DN_all[d,c(1,2)] # # lambda_ND_DN ,piTrunc_ND_DN
 param_sim[5] <- 0.5*(param_estim_UP_all[d,3] + param_estim_DN_all[d,3]) # lambda_c
 param_sim[c(6,7,8)] <- param_estim_UP_all[d,c(4,5,6)]  # mu_e_UP, sigma_e_UP, piTrunc_Read_UP
-param_sim[8] = param_estim_UP_all[d,6]/2
 param_sim[c(9,10,11)] <- param_estim_DN_all[d,c(4,5,6)]  # mu_e_DN, sigma_e_DN, piTrunc_Read_DN
-param_sim[11] = param_estim_DN_all[d,6]/2
-names(param_sim) <- c("lambda_ND_UP", "piTrunc_ND_UP", 
-                         "lambda_ND_DN" , "piTrunc_ND_DN", 
-                         "lambda_c", 
-                         "mu_e_UP" , "sigma_e_UP", "piTrunc_Read_UP", 
-                         "mu_e_DN" , "sigma_e_DN", "piTrunc_Read_DN")
+param_sim[12] = 0.5*(data.d$k/param_sim[6]  + (data.d$k + data.d$kprime)/param_sim[9])
+param_sim[6] <-data.d$k/param_sim[12]
+param_sim[9] <- (data.d$k + data.d$kprime)/param_sim[12]
+
+
 
 fact.ndata  = 1
-data.sim$Texp_UP <- rOurModelExp_freeParametrization(n = length(data.d$Texp_UP)*fact.ndata,param= param_sim,UPDN='UP',Tmax = data.d$Tmax_Texp_UP)
-data.sim$Texp_DN <- rOurModelExp_freeParametrization(n = length(data.d$Texp_DN)*fact.ndata,param= param_sim,UPDN='DN',Tmax = data.d$Tmax_Texp_DN)
+data.sim$Texp_UP <- rOurModelExp_constMu(n = length(data.d$Texp_UP)*fact.ndata,param= param_sim,UPDN='UP',Tmax = data.d$Tmax_Texp_UP)
+data.sim$Texp_DN <- rOurModelExp_constMu(n = length(data.d$Texp_DN)*fact.ndata,param= param_sim,UPDN='DN',Tmax = data.d$Tmax_Texp_DN)
 data.sim$Tctr_UP <- rExpCensored(n = length(data.d$Tctr_UP)*fact.ndata,lambda = param_sim[1],Tmax = data.d$Tmax_Tctr_UP, piTrunc=param_sim[2])
 data.sim$Tctr_DN <- rExpCensored(n = length(data.d$Tctr_DN)*fact.ndata,lambda = param_sim[3],Tmax = data.d$Tmax_Tctr_DN, piTrunc=param_sim[4])
 
-log_param_sim <- from_param_to_log_param_freeParametrization(param_sim)
+log_param_sim <- from_param_to_log_param_constMu(param_sim)
 ############################################# 
 resEstimUP <- estim_param_moment(data.sim,'UP')
 resEstimDN <- estim_param_moment(data.sim,'DN')
+
+resEstimUP <- estim_param_maxlik(data.sim,'UP')
+resEstimDN <- estim_param_maxlik(data.sim,'DN')
+
 
 #####################
 #### 
 mean(resEstimUP$echan_exp_corr)
 mean(remgCensored(1000,param_sim[6],param_sim[7],param_sim[5],Tmax= 98, param_sim[8]))
 
-param_estim_moment <- rep(0,11)
+param_estim_moment <- rep(0,12)
 param_estim_moment[c(1,2)] <- resEstimUP$param_estim[c(1,2)]
 param_estim_moment[c(3,4)] <- resEstimDN$param_estim[c(1,2)]
 param_estim_moment[5] <-  0.5*(resEstimUP$param_estim[3] + resEstimDN$param_estim[3])
 param_estim_moment[c(6,7,8)] <- resEstimUP$param_estim[c(4,5,6)]
 param_estim_moment[c(9,10,11)] <- resEstimDN$param_estim[c(4,5,6)]
+param_estim_moment[12] = 0.5*(data.d$k/param_estim_moment[6]  + (data.d$k + data.d$kprime)/param_estim_moment[9])
 names(param_estim_moment) <- names(param_sim)
 
 rbind(param_sim,param_estim_moment)
@@ -90,29 +100,35 @@ rbind(param_sim,param_estim_moment)
 #--------------- run MCMC
 
 
-log_param_init <- log_param_estim_moment <- from_param_to_log_param_freeParametrization(param_estim_moment)
+log_param_init <- log_param_estim_moment <- from_param_to_log_param_constMu(param_estim_moment)
 param_init <- param_estim_moment
 nbParam <- length(log_param_init)
-paramsChains <- list(nMCMC=5000,rho=rep(1,nbParam),nBurnin=1,paramsToSample=c(1,2,3,4,5,6,7,8,9,10,11))
+paramsChains <- list(nMCMC=1000,rho=rep(1,nbParam),nBurnin=1,paramsToSample=c(1:12)[-c(1,2,3,4,8,11)])
 paramsChains$rho[c(6,9)] <- 5
-log_param_init[-paramsChains$paramsToSample] <- from_param_to_log_param_freeParametrization(param_sim)[-paramsChains$paramsToSample]
+log_param_init[-paramsChains$paramsToSample] <- from_param_to_log_param_constMu(param_sim)[-paramsChains$paramsToSample]
 param_init[-paramsChains$paramsToSample] <- param_sim[-paramsChains$paramsToSample]
 
 
 hyperparams <- list(param1=rep(0,nbParam) ,param2 = rep(3,nbParam))
+hyperparams$param1[5] = -3;
+hyperparams$param2[5] = 1;
+
+hyperparams$param1[12] = 2; 
+hyperparams$param2[12] = 1; 
+
 hyperparams$param1[c(2,4,8,11)] = 1; 
 hyperparams$param2[c(2,4,8,11)] = 1; 
 
-resMCMC <- my_mcmc_marg_freeParametrization(data.sim,log_param_init,
+resMCMC <- my_mcmc_marg_constMu(data.sim,log_param_init,
                                                hyperparams = hyperparams,
                                                paramsChains = paramsChains)
 
 
 thinning <- 1
-burnin = 200
+burnin = 0
 extr <- seq(burnin+1,paramsChains$nMCMC,by=thinning)
 par(mfrow=c(4,3))
-for (p in c(6,7,8,9,10,11,1,2,3,4,5)){
+for (p in c(6,7,8,9,10,11,1,2,3,4,5,12)){
   U <- resMCMC$myLogPostSample[extr,p]
   plot(resMCMC$myLogPostSample[extr,p],type='l',main=names(log_param_sim)[p],ylab = '',xlab = 'iter',ylim=range(c(U,log_param_sim[p],log_param_estim_moment[p]))); 
   abline(h=log_param_sim[p],col='red',lwd=2)  
@@ -122,7 +138,7 @@ for (p in c(6,7,8,9,10,11,1,2,3,4,5)){
 }
 
 par(mfrow=c(4,3))
-for (p in c(6,7,8,9,10,11,1,2,3,4,5)){
+for (p in c(6,7,8,9,10,11,1,2,3,4,5,12)){
   U <- resMCMC$myPostSample[extr,p]
   plot(resMCMC$myPostSample[extr,p],type='l',main=names(param_sim)[p],ylab = '',xlab = 'iter',ylim=range(c(U,param_sim[p],param_estim_moment[p]))); 
   abline(h=param_sim[p],col='red',lwd=2)  

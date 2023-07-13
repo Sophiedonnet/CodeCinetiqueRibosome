@@ -28,7 +28,7 @@ estim_param_moment <- function(data,UP.or.DN = 'UP'){
   #--------------------------- data Exp: About lambda_e, lambde_c
   
   FN_exp <- ecdf(Texp)
-  FN_ctr <- ecdf(Tctr)
+  FN_ctr <-  ecdf(Tctr)
   abs <- seq(0,Tmax_Texp-1,len=1000)
   U <- function(x){
     1-(1-FN_exp(x))/(1-FN_ctr(x))
@@ -51,7 +51,80 @@ estim_param_moment <- function(data,UP.or.DN = 'UP'){
   
   return(list(param_estim = param, echan_exp_corr = Echan))
 }  
+
+
+#========================================================================
+estim_param_maxlik <- function(data,UP.or.DN = 'UP'){
+  #========================================================================
   
+  
+  
+  
+  if(UP.or.DN == 'UP'){Tctr <- data$Tctr_UP}else{Tctr <- data$Tctr_DN}
+  if(UP.or.DN == 'UP'){Texp <- data$Texp_UP}else{Texp <- data$Texp_DN}
+  Tmax_Tctr <- ifelse(UP.or.DN == 'UP',data$Tmax_Tctr_UP,data$Tmax_Tctr_DN)
+  Tmax_Texp <- ifelse(UP.or.DN == 'UP',data$Tmax_Texp_UP,data$Tmax_Texp_DN)
+  
+  
+  
+  param <- rep(0,7)
+  names(param) <- c('lambda_ND','piTrunc_ND','lambda_c','mu_emg','sigma_emg','piTrunc_Read','lambda_e')
+  
+  
+  
+  
+  #------- data Contr
+  L <- sort(1/seq(1,500,by=0.01))
+  D <-  espExpCensored(L,Tmax = Tmax_Tctr)
+  lambda_ND <- param[1] <-  L[which.min(abs(D-mean(Tctr[Tctr<Tmax_Tctr])))]
+  pi_trunc_ND <-param[2]  <- mean(Tctr == Tmax_Tctr) 
+  
+  pi_trunc_Read <- param[6] <- mean(Texp == Tmax_Texp)/param[2]
+  
+  
+  
+  #--------------------------- Init theta 
+  FN_exp <- ecdf(Texp)
+  FN_ctr <-  ecdf(Tctr)
+  abs <- seq(0,Tmax_Texp-1,len=1000)
+  U <- function(x){
+    1-(1-FN_exp(x))/(1-FN_ctr(x))
+  }
+  D <- c(0,diff(U(abs)))
+  D <- D*(D>0)/sum(D*(D>0)) 
+  Echan <- sample(abs,10000,prob = D,replace=TRUE)
+  theta_hat <- rep(NaN,3)
+  TUpperBound <- Tmax_Tctr
+  while(is.na(theta_hat[2])){
+    theta_hat <- estim_param_emg(Echan[Echan<TUpperBound])
+    TUpperBound <- TUpperBound-10
+  }
+  param[5] <- theta_hat[2] # sigma
+  param[3] <- theta_hat[3] # lambda_e
+  ######################################## 
+  
+  LL <- function(log_mu,param){
+    - sum(dminExpExpplusGaussian(Texp,
+                               mu  = exp(log_mu),
+                               sigma = param[5], 
+                               lambda = param[3], 
+                               piTrunc = param[6], 
+                               lambda_ND = param[1], 
+                               piTrunc_ND = param[2],
+                               Tmax = Tmax_Texp,
+                               log = TRUE ))
+  }
+  init_log_mu <- log(theta_hat[c(1)])
+  res_optim <- optim(init_log_mu,LL,param=param,method='Brent',lower =init_log_mu-10,upper = init_log_mu +10  )
+  # lambda_e 
+  param[4] <- exp(res_optim$par) # mu
+  
+  param[7] <- ifelse(UP.or.DN == 'UP', data$k,data$kprime + data$k)/param[4]
+  
+  return(list(param_estim = param, echan_exp_corr = Echan))
+}  
+
+
 # DD <- density(data$Tctr_UP,bw=1)
 # x <- DD$x
 # F1z <- pemgCensored(x,mu=theta_hat_UP[1],sigma=theta_hat_UP[2],lambda=theta_hat_UP[3],Tmax=data$Tmax_Texp_UP,piTrunc=param[7])

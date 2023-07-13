@@ -99,12 +99,14 @@ for (i in 1:length(names_data)){
   load(paste0(where_data,names_data[i]))
   if(!is.null(data.i$Texp_UP)){
     resEstimUP <- estim_param_moment(data.i,'UP')
+    #resEstimUP <- estim_param_maxlik(data.i,'UP')
     param_estim_UP_all[i,]<- resEstimUP$param_estim
     echan_exp_corr_UP[[i]] <- resEstimUP$echan_exp_corr
   }
 
   if(!is.null(data.i$Texp_DN)){
     resEstimDN <- estim_param_moment(data.i,'DN')
+    #resEstimDN <- estim_param_maxlik(data.i,'DN')
     param_estim_DN_all[i,]<- resEstimDN$param_estim
     echan_exp_corr_DN[[i]] <- resEstimDN$echan_exp_corr
   }
