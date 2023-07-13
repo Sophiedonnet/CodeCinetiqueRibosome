@@ -103,8 +103,11 @@ rbind(param_sim,param_estim_moment)
 log_param_init <- log_param_estim_moment <- from_param_to_log_param_constMu(param_estim_moment)
 param_init <- param_estim_moment
 nbParam <- length(log_param_init)
-paramsChains <- list(nMCMC=1000,rho=rep(1,nbParam),nBurnin=1,paramsToSample=c(1:12)[-c(1,2,3,4,8,11)])
-paramsChains$rho[c(6,9)] <- 5
+paramsChains <- list(nMCMC=1000,rho=rep(1,nbParam),nBurnin=1,paramsToSample=c(1:12)[-c(2,4,8,11)])
+paramsChains$rho[c(12)] <- 1
+paramsChains$rho[c(1,3)] <- 0.1
+
+
 log_param_init[-paramsChains$paramsToSample] <- from_param_to_log_param_constMu(param_sim)[-paramsChains$paramsToSample]
 param_init[-paramsChains$paramsToSample] <- param_sim[-paramsChains$paramsToSample]
 
