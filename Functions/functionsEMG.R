@@ -16,14 +16,14 @@ rExpCensored = function(n,lambda,Tmax = Inf, piTrunc=0){
   if(Tmax<Inf){e <- e + Z*Tmax} 
   return(e)
 }
-#----------------------------------------------------------------
-#----------- min(Gamma, Tmax)  : simulation
-#----------------------------------------------------------------
-rGammaCensored = function(n,alpha,beta,Tmax = Inf){
-  e = rgamma(n,alpha,beta)
-  e[e>=Tmax] = Tmax
-  return(e)
-}
+# #----------------------------------------------------------------
+# #----------- min(Gamma, Tmax)  : simulation
+# #----------------------------------------------------------------
+# rGammaCensored = function(n,alpha,beta,Tmax = Inf){
+#   e = rgamma(n,alpha,beta)
+#   e[e>=Tmax] = Tmax
+#   return(e)
+# }
 
 
 remgCensored = function(n,mu, sigma,lambda,Tmax = Inf, piTrunc=0){

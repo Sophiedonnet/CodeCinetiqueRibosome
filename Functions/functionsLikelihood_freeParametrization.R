@@ -88,7 +88,7 @@ dOurModelExp_freeParametrization <- function(x,param,UPDN='DN',Tmax = Inf,log = 
   
   
   lambda_ND <- ifelse(UPDN =='UP',param[1],param[3])
-  piTrunc_ND <- ifelse(UPDN =='DN',param[2],param[4])
+  piTrunc_ND <- ifelse(UPDN =='UP',param[2],param[4])
   mu_e <- ifelse(UPDN =='UP',param[6],param[9])
   sigma_e <- ifelse(UPDN =='UP',param[7],param[10])
   piTrunc_Read <- ifelse(UPDN =='UP',param[8],param[11])

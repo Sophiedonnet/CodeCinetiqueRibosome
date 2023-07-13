@@ -38,6 +38,15 @@ my_mcmc_marg_freeParametrization  = function(theData,log_param_init,
     
     if(iter%%100==0){print(paste0('Iteration ', iter))}
     
+    #------------------ param[2] 
+    NbTmax_exp_UP <- sum(theData$Texp_UP==theData$Tmax_Texp_UP)
+    log_param[2] <- rbeta(1,hyperparams$param1[2]+NbTmax_exp_UP,hyperparams$param2[2] + length(theData$Texp_UP)-NbTmax_exp_UP)
+    
+    #------------------ param[4] 
+    NbTmax_exp_DN <- sum(theData$Texp_DN==theData$Tmax_Texp_DN)
+    log_param[4] <- rbeta(1,hyperparams$param1[4]+NbTmax_exp_DN,hyperparams$param2[4] + length(theData$Texp_DN)-NbTmax_exp_DN)
+    
+    
     #-------------------------------------------------------------
     # log(lambda_ND_R, lambda_ND_V, lambda_c,lambda_e,log lambda_QD ,logit
     #-------------------------------------------------------------

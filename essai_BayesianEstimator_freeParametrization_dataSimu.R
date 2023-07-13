@@ -57,7 +57,7 @@ names(param_sim) <- c("lambda_ND_UP", "piTrunc_ND_UP",
                          "mu_e_UP" , "sigma_e_UP", "piTrunc_Read_UP", 
                          "mu_e_DN" , "sigma_e_DN", "piTrunc_Read_DN")
 
-fact.ndata  = 10
+fact.ndata  = 1
 data.sim$Texp_UP <- rOurModelExp_freeParametrization(n = length(data.d$Texp_UP)*fact.ndata,param= param_sim,UPDN='UP',Tmax = data.d$Tmax_Texp_UP)
 data.sim$Texp_DN <- rOurModelExp_freeParametrization(n = length(data.d$Texp_DN)*fact.ndata,param= param_sim,UPDN='DN',Tmax = data.d$Tmax_Texp_DN)
 data.sim$Tctr_UP <- rExpCensored(n = length(data.d$Tctr_UP)*fact.ndata,lambda = param_sim[1],Tmax = data.d$Tmax_Tctr_UP, piTrunc=param_sim[2])
@@ -65,20 +65,25 @@ data.sim$Tctr_DN <- rExpCensored(n = length(data.d$Tctr_DN)*fact.ndata,lambda = 
 
 log_param_sim <- from_param_to_log_param_freeParametrization(param_sim)
 ############################################# 
-resEstimUP <- estim_param_moment(data.sim,'UP')$param_estim
-resEstimDN <- estim_param_moment(data.sim,'DN')$param_estim
+resEstimUP <- estim_param_moment(data.sim,'UP')
+resEstimDN <- estim_param_moment(data.sim,'DN')
+
+#####################
+#### 
+mean(resEstimUP$echan_exp_corr)
+mean(remgCensored(1000,param_sim[6],param_sim[7],param_sim[5],Tmax= 98, param_sim[8]))
 
 param_estim_moment <- rep(0,11)
-param_estim_moment[c(1,2)] <- resEstimUP[c(1,2)]
-param_estim_moment[c(3,4)] <- resEstimDN[c(1,2)]
-param_estim_moment[5] <-  0.5*(resEstimUP[3] + resEstimDN[3])
-param_estim_moment[c(6,7,8)] <- resEstimUP[c(4,5,6)]
-param_estim_moment[c(9,10,11)] <- resEstimDN[c(4,5,6)]
+param_estim_moment[c(1,2)] <- resEstimUP$param_estim[c(1,2)]
+param_estim_moment[c(3,4)] <- resEstimDN$param_estim[c(1,2)]
+param_estim_moment[5] <-  0.5*(resEstimUP$param_estim[3] + resEstimDN$param_estim[3])
+param_estim_moment[c(6,7,8)] <- resEstimUP$param_estim[c(4,5,6)]
+param_estim_moment[c(9,10,11)] <- resEstimDN$param_estim[c(4,5,6)]
 names(param_estim_moment) <- names(param_sim)
 
 rbind(param_sim,param_estim_moment)
 
-  
+ 
 
 ##############################################"
 ###############" MCMC Estimation starting from moment estimator
@@ -95,10 +100,9 @@ log_param_init[-paramsChains$paramsToSample] <- from_param_to_log_param_freePara
 hyperparams <- list(mean=rep(0,nbParam) ,sd = rep(3,nbParam))
 resMCMC <- my_mcmc_marg_freeParametrization(data.sim,log_param_init,
                                                hyperparams = hyperparams,
-                                               paramsChains = paramsChains)
-  
- thinning <- 1
+                                               paramsChains = paramsChains)thinning <- 1
 burnin <- 0
+thinning <- 1
 extr <- seq(1,paramsChains$nMCMC-burnin,by=thinning)
 par(mfrow=c(4,3))
 for (p in c(6,7,8,9,10,11,1,2,3,4,5)){
