@@ -18,7 +18,6 @@ library(emg)
 source('Functions/functionsEMG.R')
 source('Functions/functionsMomentEstimations.R')
 source('Functions/functionsPlotPostInference.R')
-source('Functions/myMCMC_marg.R')
 source('Functions/myMCMC_marg_freeParametrization.R')
 source('Functions/functionsLikelihood_freeParametrization.R')
 
@@ -94,23 +93,31 @@ rbind(param_sim,param_estim_moment)
 log_param_init <- log_param_estim_moment <- from_param_to_log_param_freeParametrization(param_estim_moment)
 param_init <- param_estim_moment
 nbParam <- length(log_param_init)
-paramsChains <- list(nMCMC=1000,rho=rep(1,nbParam),nBurnin=1,paramsToSample=c(1,2,3,4,5,6,7,9,10))
+paramsChains <- list(nMCMC=5000,rho=rep(1,nbParam),nBurnin=1,paramsToSample=c(1,2,3,4,5,6,7,8,9,10,11))
 paramsChains$rho[c(6,9)] <- 5
 log_param_init[-paramsChains$paramsToSample] <- from_param_to_log_param_freeParametrization(param_sim)[-paramsChains$paramsToSample]
-hyperparams <- list(mean=rep(0,nbParam) ,sd = rep(3,nbParam))
+param_init[-paramsChains$paramsToSample] <- param_sim[-paramsChains$paramsToSample]
+
+
+hyperparams <- list(param1=rep(0,nbParam) ,param2 = rep(3,nbParam))
+hyperparams$param1[c(2,4,8,11)] = 1; 
+hyperparams$param2[c(2,4,8,11)] = 1; 
+
 resMCMC <- my_mcmc_marg_freeParametrization(data.sim,log_param_init,
                                                hyperparams = hyperparams,
-                                               paramsChains = paramsChains)thinning <- 1
-burnin <- 0
+                                               paramsChains = paramsChains)
+
+
 thinning <- 1
-extr <- seq(1,paramsChains$nMCMC-burnin,by=thinning)
+burnin = 200
+extr <- seq(burnin+1,paramsChains$nMCMC,by=thinning)
 par(mfrow=c(4,3))
 for (p in c(6,7,8,9,10,11,1,2,3,4,5)){
   U <- resMCMC$myLogPostSample[extr,p]
   plot(resMCMC$myLogPostSample[extr,p],type='l',main=names(log_param_sim)[p],ylab = '',xlab = 'iter',ylim=range(c(U,log_param_sim[p],log_param_estim_moment[p]))); 
   abline(h=log_param_sim[p],col='red',lwd=2)  
   abline(h=log_param_estim_moment[p],col='green',lwd=2,lty=2)  
-  abline(h=log_param_init[p],col='magenta',lwd=2,lty=2)  
+  #abline(h=log_param_init[p],col='magenta',lwd=2,lty=3)  
   
 }
 
