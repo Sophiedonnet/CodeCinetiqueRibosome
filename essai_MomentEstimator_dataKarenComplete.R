@@ -30,49 +30,49 @@ where_data <- c('DataKarenComplete/RawData/') # où sont les données envoyées 
 #toCorrect <- c("DataKarenComplete/RawData/UP049RDN205G_CtrA0","DataKarenComplete/RawData/UP180RDN205G_CtrA0") # 2 fichiers que j'ai repérés pour lesquels les temps interimages n'étaient pas égaux? 
 
 
-names_data <- list.files(where_data) # liste les fichiers de Rdata
-Nbfiles <- length(names_data)
-all_directories <- paste0(where_data,names_data)
-for (i in 1:Nbfiles){
-  names.i <- list.files(all_directories[i])
-  print(names.i)
-  print(all_directories[i])
-  names.i.1 <- paste0(all_directories[i],'/',names.i)
-  data.i <- lapply(names.i.1,function(f){read.table(f, quote="\"", comment.char="")$V1})
-  names(data.i)<- sapply(names.i,function(s){substr(s,1,7)})
-#  if(all_directories[i] %in% toCorrect){
-#    data.i$Tctr_DN  = data.i$Tctr_DN*2
-#    data.i$Texp_DN  = data.i$Texp_DN*2
-#  }
-  
-  Tmax <- lapply(data.i,max)
-  names(Tmax) <- paste0(rep('Tmax_',length(names(data.i))),names(data.i))
-  data.i <- c(data.i,Tmax)
-
-
-  data.i$colorUP <-ifelse(substr(names_data[i],6,6)=='G','green','red')
-  data.i$colorDN <-ifelse(substr(names_data[i],12,12)=='G','green','red')
-  data.i$k <- as.numeric(substr(names_data[i],3,5) )
-  data.i$kprime <- as.numeric(substr(names_data[i],9,11) ) - data.i$k
-  data.i$name_data <- gsub("\\..*","",names_data[i])
-  save(data.i,file = paste0('DataKarenComplete/FormattedData/',names_data[i],'.Rdata' ))
-}
+# names_data <- list.files(where_data) # liste les fichiers de Rdata
+# Nbfiles <- length(names_data)
+# all_directories <- paste0(where_data,names_data)
+# for (i in 1:Nbfiles){
+#   names.i <- list.files(all_directories[i])
+#   print(names.i)
+#   print(all_directories[i])
+#   names.i.1 <- paste0(all_directories[i],'/',names.i)
+#   data.i <- lapply(names.i.1,function(f){read.table(f, quote="\"", comment.char="")$V1})
+#   names(data.i)<- sapply(names.i,function(s){substr(s,1,7)})
+# #  if(all_directories[i] %in% toCorrect){
+# #    data.i$Tctr_DN  = data.i$Tctr_DN*2
+# #    data.i$Texp_DN  = data.i$Texp_DN*2
+# #  }
+#   
+#   Tmax <- lapply(data.i,max)
+#   names(Tmax) <- paste0(rep('Tmax_',length(names(data.i))),names(data.i))
+#   data.i <- c(data.i,Tmax)
+# 
+# 
+#   data.i$colorUP <-ifelse(substr(names_data[i],6,6)=='G','green','red')
+#   data.i$colorDN <-ifelse(substr(names_data[i],12,12)=='G','green','red')
+#   data.i$k <- as.numeric(substr(names_data[i],3,5) )
+#   data.i$kprime <- as.numeric(substr(names_data[i],9,11) ) - data.i$k
+#   data.i$name_data <- gsub("\\..*","",names_data[i])
+#   save(data.i,file = paste0('DataKarenComplete/FormattedData/',names_data[i],'.Rdata' ))
+# }
 # 
 # ################################################"
 # ############ Plot all data
 # #################################################
-where_data <- c('DataKarenComplete/FormattedData/')
-names_data <- list.files(where_data)
-for (i in 1:length(names_data)){
-
-  print(i)
-  w <- paste0(where_data,names_data[i])
-  where_plot <- paste0("DataKarenComplete/plotData/",gsub("\\..*","",names_data[i]),"_plotdata.png")
-  load(w)
-  p <- plot_FN_all_data(data.i) ### plot_FN_all_data est une fonction adhoc pour tracer les données. p est un objet ggplot2 . 
-  ggsave(where_plot)
- 
-}
+# where_data <- c('DataKarenComplete/FormattedData/')
+# names_data <- list.files(where_data)
+# for (i in 1:length(names_data)){
+# 
+#   print(i)
+#   w <- paste0(where_data,names_data[i])
+#   where_plot <- paste0("DataKarenComplete/plotData/",gsub("\\..*","",names_data[i]),"_data.png")
+#   load(w)
+#   p <- plot_FN_all_data(data.i) ### plot_FN_all_data est une fonction adhoc pour tracer les données. p est un objet ggplot2 . 
+#   ggsave(where_plot)
+#  
+# }
 
 ##############################################"
 ###############" Estim moment
@@ -119,23 +119,23 @@ load(file='DataKarenComplete/res_EstimMoment_allData.Rdata')
 ###############" PLOT fit Exp distri to  data Ctr
 #############################################
 for (i in 1:length(names_data)){
-  
+
   print(names_data[i])
-  
-  where_plot_fit_Ctr <- paste0("DataKarenComplete/plotFit/dataCtr/PDF/",gsub("\\..*","",names_data[i]),"_plotFitCtr.png")
+
+  where_plot_fit_Ctr <- paste0("DataKarenComplete/plotFit/MomentEstimation/dataCtr/",gsub("\\..*","",names_data[i]),"_Ctr_PDF.png")
   load(paste0(where_data,names_data[i]))
   g <- plot_Fit_Ctr(data.i,param_estim_UP_all[i,],param_estim_DN_all[i,],which.curve = 'pdf')
   g
   ggsave(where_plot_fit_Ctr)
-  
-  
-  where_plot_fit_Ctr <- paste0("DataKarenComplete/plotFit/dataCtr/Density/",gsub("\\..*","",names_data[i]),"_plotFitCtr.png")
+
+
+  where_plot_fit_Ctr <- paste0("DataKarenComplete/plotFit/MomentEstimation/dataCtr/",gsub("\\..*","",names_data[i]),"_Ctr_density.png")
   load(paste0(where_data,names_data[i]))
   g <- plot_Fit_Ctr(data.i,param_estim_UP_all[i,],param_estim_DN_all[i,],which.curve = 'density')
   g
   ggsave(where_plot_fit_Ctr)
-  
-  
+
+
 }
 
 
@@ -145,7 +145,7 @@ for (i in 1:length(names_data)){
 for (i in 1:length(names_data)){
   
   print(names_data[i])
-  where_plot_fit_emg <- paste0("DataKarenComplete/plotFit/dataExpCorrected/Density/",gsub("\\..*","",names_data[i]),"_plotFitEmg")
+  where_plot_fit_emg <- paste0("DataKarenComplete/plotFit/MomentEstimation/dataExpCorrected/",gsub("\\..*","",names_data[i]),"_FitEmg_density")
   load(paste0(where_data,names_data[i]))
   
   png(file=paste0(where_plot_fit_emg,'_dens.png'))
@@ -166,7 +166,7 @@ for (i in 1:length(names_data)){
   }
   dev.off()
 
-  where_plot_fit_emg <- paste0("DataKarenComplete/plotFit/dataExpCorrected/PDF/",gsub("\\..*","",names_data[i]),"_plotFitEmg")
+  where_plot_fit_emg <- paste0("DataKarenComplete/plotFit/MomentEstimation/dataExpCorrected/",gsub("\\..*","",names_data[i]),"_FitEmg_pdf")
   
   png(file=paste0(where_plot_fit_emg,'_pdf.png'))
   par(mfrow=c(2,1))
@@ -188,14 +188,14 @@ for (i in 1:length(names_data)){
 
 
 #################################################################################""
-###############" PLOT fit  to Experi Data
+###############" PLOT fit  to Experimental Data
 ####################################################################################
 for (i in 1:length(names_data)){
   
   print(names_data[i])
   load(paste0(where_data,names_data[i]))
   
-  where_plot_fit_exp<- paste0("DataKarenComplete/plotFit/dataExp/PDF/",gsub("\\..*","",names_data[i]),"_plotExpData")
+  where_plot_fit_exp<- paste0("DataKarenComplete/plotFit/MomentEstimation/dataExp/",gsub("\\..*","",names_data[i]),"_ExpData_pdf")
   
   ##############         PDF 
   D <- c()
@@ -241,7 +241,7 @@ for (i in 1:length(names_data)){
   ggsave(paste0(where_plot_fit_exp,'.png'))
   
   ##############        hist 
-  where_plot_fit_exp<- paste0("DataKarenComplete/plotFit/dataExp/Density/",gsub("\\..*","",names_data[i]),"_plotExpData")
+  where_plot_fit_exp<- paste0("DataKarenComplete/plotFit/MomentEstimation/dataExp/",gsub("\\..*","",names_data[i]),"_ExpData_density")
   png(file=paste0(where_plot_fit_exp,'.png'))
   par(mfrow=c(2,1))
   
@@ -295,6 +295,6 @@ param_estim <- cbind(param_estim_UP_all[,-c(2,4,5,6)], param_estim_DN_all[,-c(2,
 param_estim <- 1/param_estim
 colnames(param_estim) <-  c('mean_ND_UP','mean_c_UP','mean_e_UP','mean_ND_DN','mean_c_DN','mean_e_DN')
 param_estim <- as.data.frame(param_estim)
-write.csv(param_estim,file='DataKarenComplete/param_estim.csv',row.names  = TRUE)
+write.csv(param_estim,file='DataKarenComplete/res_EstimMoment.csv',row.names  = TRUE)
 
 

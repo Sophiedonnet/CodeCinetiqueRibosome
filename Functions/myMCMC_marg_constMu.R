@@ -101,6 +101,7 @@ my_mcmc_marg_constMu  = function(theData,log_param_init,
   #-------------------------- 
   myPostSample <- myLogPostSample
   myPostSample[,c(1,3,5,7,10,12)] <- exp(myLogPostSample[,c(1,3,5,7,10,12)])
+  names(myPostSample) <- names(from_logparam_to_param(log_param_init))
 
   
   return(list(myPostSample  = myPostSample,myLogPostSample  = myLogPostSample))
@@ -259,11 +260,11 @@ dOurModelExp_constMu <- function(x,param,UPDN='DN',Tmax = Inf,log = FALSE){
   # output : vector of same length as x
   
   
-  lambda_ND <- ifelse(UPDN =='UP',param[1],param[3])
-  piTrunc_ND <- ifelse(UPDN =='UP',param[2],param[4])
-  mu_e <- ifelse(UPDN =='UP',param[6],param[9])
-  sigma_e <- ifelse(UPDN =='UP',param[7],param[10])
-  piTrunc_Read <- ifelse(UPDN =='UP',param[8],param[11])
+  lambda_ND <-     ifelse(UPDN =='UP',param[1],param[3])
+  piTrunc_ND <-    ifelse(UPDN =='UP',param[2],param[4])
+  mu_e <-          ifelse(UPDN =='UP',param[6],param[9])
+  sigma_e <-       ifelse(UPDN =='UP',param[7],param[10])
+  piTrunc_Read <-  ifelse(UPDN =='UP',param[8],param[11])
   lambda_c <- param[5]
   
   f <- dminExpExpplusGaussian(x,mu = mu_e,sigma = sigma_e,lambda = lambda_c,piTrunc = piTrunc_Read,lambda_ND = lambda_ND,piTrunc_ND = piTrunc_ND,Tmax,log) 
@@ -294,11 +295,11 @@ rOurModelExp_constMu <- function(n,param,UPDN='DN',Tmax = Inf){
   
   
   
-  lambda_ND <- ifelse(UPDN =='UP',param[1],param[3])
-  piTrunc_ND <- ifelse(UPDN =='UP',param[2],param[4])
-  mu_e <- ifelse(UPDN =='UP',param[6],param[9])
-  sigma_e <- ifelse(UPDN =='UP',param[7],param[10])
-  piTrunc_Read <- ifelse(UPDN =='UP',param[8],param[11])
+  lambda_ND <-     ifelse(UPDN =='UP',param[1],param[3])
+  piTrunc_ND <-    ifelse(UPDN =='UP',param[2],param[4])
+  mu_e <-          ifelse(UPDN =='UP',param[6],param[9])
+  sigma_e <-       ifelse(UPDN =='UP',param[7],param[10])
+  piTrunc_Read <-  ifelse(UPDN =='UP',param[8],param[11])
   lambda_c <- param[5]
   
   E <- rminExpExpplusGaussian(n,mu = mu_e,sigma = sigma_e,lambda = lambda_c,piTrunc = piTrunc_Read,lambda_ND = lambda_ND,piTrunc_ND = piTrunc_ND,Tmax) 
