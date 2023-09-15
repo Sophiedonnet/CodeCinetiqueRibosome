@@ -31,7 +31,7 @@ all_directories <- paste0(where_data,names_data)
 load('DataKarenComplete/resEstim/res_EstimMoment_allData.Rdata')
 
 
-d = 1; 
+d = 2; 
 load(paste0(where_data,names_data[d]))
 data.d <- data.i
 # data.sim <- data.d
