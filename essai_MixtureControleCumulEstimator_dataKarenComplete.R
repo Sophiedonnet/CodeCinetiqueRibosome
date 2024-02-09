@@ -17,7 +17,6 @@ library(ggplot2)
 library(dplyr)
 library(emg)
 library(mixtools)
-library()
 source('Functions/functionsEMG.R')
 source('Functions/functionsMomentEstimations.R')
 source('Functions/functionsPlotPostInference.R')
@@ -33,7 +32,7 @@ for (i in 1:length(names_data)){
   print(names_data[i])
   data_C <- read.table(paste0(where_data,'/',names_data[i]))
   untruncated <- data_C$V1[data_C$V1< max(data_C$V1) & data_C$V1>0]
-  hist(untruncated,freq= FALSE,nclass=50)
+
   
   res <- lapply(2:4, function(K){ 
     mixtools::normalmixEM(log(untruncated),maxit = 10000,k=K)
@@ -42,7 +41,14 @@ for (i in 1:length(names_data)){
   res <- res[[which.max(loglik)-1]]
   
   abs = seq(min(untruncated),max(untruncated),len = 1000)
-  fit <- apply(sapply(1:which.max(loglik),function(k){res$lambda[k]*plnorm(abs,res$mu[k],res$sigma[k])}),1,sum)
-  plot(ecdf(untruncated))
-  lines(abs,fit,col='red',add = TRUE)
+  
+  par(mfrow= c(1,2))
+  pfit <- apply(sapply(1:which.max(loglik),function(k){res$lambda[k]*plnorm(abs,res$mu[k],res$sigma[k])}),1,sum)
+  plot(ecdf(untruncated), main = names_data[i])
+  lines(abs,pfit,col='red',add = TRUE)
+  
+  dfit <- apply(sapply(1:which.max(loglik),function(k){res$lambda[k]*dlnorm(abs,res$mu[k],res$sigma[k])}),1,sum)
+  hist(untruncated,freq= FALSE,nclass=50)
+  lines(abs,dfit,col='red',add = TRUE)
+  
   }
