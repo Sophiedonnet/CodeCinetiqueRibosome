@@ -1,38 +1,41 @@
 #========================================================================
-estim_param_moment <- function(data,UP.or.DN = 'UP'){
+estim_param_moment <- function(data,UP.or.DN = 'UP',paramCtr){
 #========================================================================
   
   
   
- 
-  if(UP.or.DN == 'UP'){Tctr <- data$Tctr_UP}else{Tctr <- data$Tctr_DN}
-  if(UP.or.DN == 'UP'){Texp <- data$Texp_UP}else{Texp <- data$Texp_DN}
+  if(UP.or.DN == 'UP'){
+    Tctr <- data$Tctr_UP
+    Texp <- data$Texp_UP
+  }else{
+    Tctr <- data$Tctr_DN
+    Texp <- data$Texp_DN
+  }
+
   Tmax_Tctr <- ifelse(UP.or.DN == 'UP',data$Tmax_Tctr_UP,data$Tmax_Tctr_DN)
   Tmax_Texp <- ifelse(UP.or.DN == 'UP',data$Tmax_Texp_UP,data$Tmax_Texp_DN)
+ 
   
-  
-  
-  param <- rep(0,7)
-  names(param) <- c('lambda_ND','piTrunc_ND','lambda_c','mu_emg','sigma_emg','piTrunc_Read','lambda_e')
+  paramExp <- rep(0,3)
+  names(paramExp) <- c('lambda_c','lambda_e','sigma_emg')
   
   
   
     
   #------- data Contr
-  L <- sort(1/seq(1,500,by=0.01))
-  D <-  espExpCensored(L,Tmax = Tmax_Tctr)
-  param[1] <-  L[which.min(abs(D-mean(Tctr[Tctr<Tmax_Tctr])))]
-  param[2]  <- mean(Tctr == Tmax_Tctr) 
-
+  #L <- sort(1/seq(1,500,by=0.01))
+  #D <-  espExpCensored(L,Tmax = Tmax_Tctr)
+  #param[1] <-  L[which.min(abs(D-mean(Tctr[Tctr<Tmax_Tctr])))]
+  
   
   #--------------------------- data Exp: About lambda_e, lambde_c
   
-  FN_exp <- ecdf(Texp)
-  FN_ctr <-  ecdf(Tctr)
+  FN_exp <- ecdf(Texp[Texp<Tmax_Texp])
   abs <- seq(0,Tmax_Texp-1,len=1000)
   U <- function(x){
-    1-(1-FN_exp(x))/(1-FN_ctr(x))
+    1-(1-FN_exp(x))/(1-pCtrData(x,param = paramCtr))
   }
+  
   D <- c(0,diff(U(abs)))
   D <- D*(D>0)/sum(D*(D>0)) 
   Echan <- sample(abs,10000,prob = D,replace=TRUE)
@@ -43,11 +46,12 @@ estim_param_moment <- function(data,UP.or.DN = 'UP'){
     theta_hat <- estim_param_emg(Echan[Echan<TUpperBound])
     TUpperBound <- TUpperBound-10
   }
-  param[3] <- theta_hat[3] # lambda_e 
-  param[4] <- theta_hat[1] # mu
-  param[5] <- theta_hat[2] # sigma
-  param[6] <- mean(Texp == Tmax_Texp)/param[2]
-  param[7] <- ifelse(UP.or.DN == 'UP', data$k,data$kprime + data$k)/param[4]
+  param[1] <- theta_hat[3] # lambda_e 
+  param[2] <-  ifelse(UP.or.DN == 'UP', data$k,data$kprime + data$k)/theta_hat[1] # mu
+  param[3] <- theta_hat[2] # sigma
+  
+  plot(density(Echan))
+  lines(abs,demg(abs,mu=theta_hat[1],sigma= theta_hat[2],theta_hat[3]),col='red')
   
   return(list(param_estim = param, echan_exp_corr = Echan))
 }  

@@ -80,6 +80,10 @@ for (i in 1:length(names_data)){
 ##################################################
 where_data <- c('DataKarenComplete/FormattedData/')
 names_data <- list.files(where_data)
+Kmax = 3
+paramCtrUP <- vector("list",length(names_data))
+paramCtrDN <- vector("list",length(names_data))
+
 for (i in 1:length(names_data)){
   # 
   print(i)
@@ -87,50 +91,51 @@ for (i in 1:length(names_data)){
   load(w)
   
   #-------------------
-  resFitMixture <- list()
+  resFitMixture <- vector("list",2)
+  names(resFitMixture) <- c('UP','DN')
   #------------------- 
+  
   Tctr_UP <- data.i$Tctr_UP[data.i$Tctr_UP < data.i$Tmax_Tctr_UP & data.i$Tctr_UP>0]
-  resFitMixture$UP <- fitMixtureCtr(Tctr_UP,Kmax = 3)
+  paramCtrUP[[i]] <-  fitMixtureCtr(Tctr_UP,Kmax = Kmax, select = TRUE)
   #------------------- 
   Tctr_DN <- data.i$Tctr_DN[data.i$Tctr_DN < data.i$Tmax_Tctr_DN & data.i$Tctr_DN>0]
-  resFitMixture$DN <- fitMixtureCtr(Tctr_DN,Kmax = 2)
+  paramCtrDN[[i]] <-  fitMixtureCtr(Tctr_DN,Kmax = Kmax,select   = TRUE)
   
   
   
   abs = seq(0,data.i$Tmax_Tctr_UP,len = 1000)
+  par(mfrow= c(2,2))
   
-  par(mfrow= c(1,2))
-  pfit <- apply(sapply(1:length(res$mu),function(k){res$lambda[k]*plnorm(abs,res$mu[k],res$sigma[k])}),1,sum)
-  plot(ecdf(Tctr_UP), main = names_data[i])
-  lines(abs,pfit,col='red',add = TRUE)
-  dfit <- apply(sapply(1:length(res$mu),function(k){res$lambda[k]*dlnorm(abs,res$mu[k],res$sigma[k])}),1,sum)
+  plot(ecdf(Tctr_UP), main = paste(names_data[i],'UP',sep='----'))
+  lines(abs,plnormMixture(abs,param=paramCtrUP[[i]]),col='red')
+  lines(abs,pexp(abs,1/mean(Tctr_UP)),col='green')
   
-  hist(Tctr_UP,freq= FALSE,nclass=50)
-  lines(abs,dfit,col='red',add = TRUE)
-  lines(abs,dexp(abs,1/mean(Tctr_UP)),add = TRUE,col='green')
+  hist(Tctr_UP,freq= FALSE,nclass=50,main = 'UP')
+  lines(abs,dlnormMixture(abs,param=paramCtrUP[[i]]),col='red',add = TRUE)
+  lines(abs,dexp(abs,1/mean(Tctr_UP)),col='green')
+
+  plot(ecdf(Tctr_DN), main = paste(names_data[i],'DN',sep='----'))
+  lines(abs,plnormMixture(abs,param=paramCtrDN[[i]]),col='red')
+  lines(abs,pexp(abs,1/mean(Tctr_DN)),col='green')
   
-  
-    
+  hist(Tctr_DN,freq= FALSE,nclass=50,main = 'DN')
+  lines(abs,dlnormMixture(abs,param=paramCtrDN[[i]]),col='red')
+  lines(abs,dexp(abs,1/mean(Tctr_DN)),col='green')
 }
 
 
 ##############################################"
 ###############" Estim moment
 #############################################
-where_data <- c('DataKarenComplete/FormattedData/')
-names_data <- list.files(where_data)
 
 
 #-------------------------------------------- Stoackage param estimés
-param_estim_DN_all <- param_estim_UP_all <- matrix(NA,length(names_data),7)
-rownames(param_estim_UP_all) <- rownames(param_estim_DN_all ) <- gsub("\\..*","",names_data)
-colnames(param_estim_UP_all) <- paste0(c('lambda_ND','piTrunc_ND','lambda_c','mu_emg','sigma_emg','piTrunc_Read','lambda_e'),'_UP')
-colnames(param_estim_DN_all) <- paste0(c('lambda_ND','piTrunc_ND','lambda_c','mu_emg','sigma_emg','piTrunc_Read','lambda_e'),'_DN')
-
-echan_exp_corr_UP <- vector("list", length(names_data))
-echan_exp_corr_DN <-vector("list", length(names_data))
-names(echan_exp_corr_DN) <-names(echan_exp_corr_UP)<- gsub("\\..*","",names_data)
-
+param_estim_all <- matrix(NA,length(names_data),3)
+rownames(param_estim_all) <- rownames(param_estim_all ) <- gsub("\\..*","",names_data)
+colnames(param_estim_all) <- paste0(c('lambda_c','lambda_e','sigma'))
+echan_exp_corr <- vector("list", length(names_data))
+echan_exp_corr <-vector("list", length(names_data))
+names(echan_exp_corr) 
 
 for (i in 1:length(names_data)){
 
@@ -138,7 +143,7 @@ for (i in 1:length(names_data)){
 
   load(paste0(where_data,names_data[i]))
   if(!is.null(data.i$Texp_UP)){
-    resEstimUP <- estim_param_moment(data.i,'UP')
+    resEstimUP <- estim_param_moment(data.i,'UP',paramCtr = paramCtrUP[[i]])
     #resEstimUP <- estim_param_maxlik(data.i,'UP')
     param_estim_UP_all[i,]<- resEstimUP$param_estim
     echan_exp_corr_UP[[i]] <- resEstimUP$echan_exp_corr
