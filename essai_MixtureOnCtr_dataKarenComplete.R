@@ -18,6 +18,7 @@ library(emg)
 source('Functions/functionsLikelihood_MixtureOnCtrData.R')
 source('Functions/functionsMomentEstimations.R')
 source('Functions/functionsPlotPostInference.R')
+source('Functions/functionsEMG.R')
 
 
 ##################################################
@@ -80,7 +81,7 @@ for (i in 1:length(names_data)){
 ##################################################
 where_data <- c('DataKarenComplete/FormattedData/')
 names_data <- list.files(where_data)
-Kmax = 3
+Kmax = 1
 paramCtrUP <- vector("list",length(names_data))
 paramCtrDN <- vector("list",length(names_data))
 
@@ -96,32 +97,44 @@ for (i in 1:length(names_data)){
   #------------------- 
   
   Tctr_UP <- data.i$Tctr_UP[data.i$Tctr_UP < data.i$Tmax_Tctr_UP & data.i$Tctr_UP>0]
-  paramCtrUP[[i]] <-  fitMixtureCtr(Tctr_UP,Kmax = Kmax, select = TRUE)
+  paramCtrUP[[i]] <-  fitMixtureCtr(Tctr_UP,Tmax =data.i$Tmax_Tctr_UP ,Kmax = Kmax, select = TRUE)
+  
+  logLikExp <- sum(dexp(Tctr_UP,1/mean(Tctr_UP),log = TRUE))
+  logLikLogNormal <-  paramCtrUP[[i]]$loglik
+  if(logLikExp>logLikLogNormal){bestmodelUP = 'exp'}else{bestmodelUP='lognormal'}
+  
   #------------------- 
   Tctr_DN <- data.i$Tctr_DN[data.i$Tctr_DN < data.i$Tmax_Tctr_DN & data.i$Tctr_DN>0]
-  paramCtrDN[[i]] <-  fitMixtureCtr(Tctr_DN,Kmax = Kmax,select   = TRUE)
+  paramCtrDN[[i]] <-  fitMixtureCtr(Tctr_DN,Tmax =data.i$Tmax_Tctr_DN,Kmax = Kmax,select   = TRUE)
   
+  logLikExp <- sum(dexp(Tctr_DN,1/mean(Tctr_DN),log = TRUE))
+  logLikLogNormal <-  paramCtrDN[[i]]$loglik
+  if(logLikExp>logLikLogNormal){bestmodelDN = 'exp'}else{bestmodelDN='lognormal'}
   
   
   abs = seq(0,data.i$Tmax_Tctr_UP,len = 1000)
   par(mfrow= c(2,2))
   
-  plot(ecdf(Tctr_UP), main = paste(names_data[i],'UP',sep='----'))
-  lines(abs,plnormMixture(abs,param=paramCtrUP[[i]]),col='red')
+  plot(ecdf(Tctr_UP), main = paste(i,'UP ', bestmodelUP,sep=' . '))
+  lines(abs,pCtrData(abs,param=paramCtrUP[[i]],Tmax = data.i$Tmax_Tctr_UP) ,col='red')
   lines(abs,pexp(abs,1/mean(Tctr_UP)),col='green')
   
   hist(Tctr_UP,freq= FALSE,nclass=50,main = 'UP')
-  lines(abs,dlnormMixture(abs,param=paramCtrUP[[i]]),col='red',add = TRUE)
+  lines(abs,dCtrData(abs,param=paramCtrUP[[i]],Tmax = data.i$Tmax_Tctr_UP),col='red',add = TRUE)
   lines(abs,dexp(abs,1/mean(Tctr_UP)),col='green')
 
-  plot(ecdf(Tctr_DN), main = paste(names_data[i],'DN',sep='----'))
-  lines(abs,plnormMixture(abs,param=paramCtrDN[[i]]),col='red')
+  plot(ecdf(Tctr_DN), main = paste(i,'DN ', bestmodelDN,sep=' . '))
+  lines(abs,pCtrData(abs,param=paramCtrDN[[i]],Tmax = data.i$Tmax_Tctr_DN),col='red')
   lines(abs,pexp(abs,1/mean(Tctr_DN)),col='green')
   
   hist(Tctr_DN,freq= FALSE,nclass=50,main = 'DN')
-  lines(abs,dlnormMixture(abs,param=paramCtrDN[[i]]),col='red')
+  lines(abs,dCtrData(abs,param=paramCtrDN[[i]],Tmax = data.i$Tmax_Tctr_DN),col='red')
   lines(abs,dexp(abs,1/mean(Tctr_DN)),col='green')
 }
+
+
+
+
 
 
 ##############################################"
@@ -143,10 +156,36 @@ for (i in 1:length(names_data)){
 
   load(paste0(where_data,names_data[i]))
   if(!is.null(data.i$Texp_UP)){
-    resEstimUP <- estim_param_moment(data.i,'UP',paramCtr = paramCtrUP[[i]])
-    #resEstimUP <- estim_param_maxlik(data.i,'UP')
-    param_estim_UP_all[i,]<- resEstimUP$param_estim
-    echan_exp_corr_UP[[i]] <- resEstimUP$echan_exp_corr
+    
+    Texp <- data.i$Texp_UP[data.i$Texp_UP< data.i$Tmax_Texp_UP]
+    Tctr <- data.i$Tctr_UP[data.i$Tctr_UP< data.i$Tmax_Tctr_UP]
+    paramCtr <- paramCtrUP[[i]]
+    Tmax <- data.i$Tmax_Texp_UP
+    hist(Texp,freq= FALSE,nclass = 100)
+    hist(Tctr,freq= FALSE,nclass = 100,add = TRUE, col='red')
+    
+    
+    resEstimUP <- estim_param_moment(Texp, Tmax,paramCtr)
+    paramExp <- resEstimUP$paramExpMoment
+    
+    hist(Texp,freq = FALSE,nclass= 100)
+    curve(dminCtrEMG(x,paramExp,paramCtr,Tmax),0,Tmax,col='red',add = TRUE)
+    curve(demg(x,mu=paramExp[1],sigma = paramExp[2],lambda = paramExp[3]),0,Tmax,col='green',add = TRUE)
+    
+    logparamExp <- paramExp
+    logparamExp[c(2,3)] <-log(paramExp[c(2,3)])
+    resOptim <- optim(par = logparamExp, fn = loglik_Texp_mixture, paramCtr= paramCtr, Texp = Texp,Tmax = Tmax)
+    paramExp_estim <-resOptim$par
+    paramExp_estim[c(2,3)] <-exp(resOptim$par[c(2,3)])
+    
+    hist(Texp,freq = FALSE,nclass= 100)
+    curve(dminCtrEMG(x,paramExp,paramCtr,Tmax),0,Tmax,col='red',add = TRUE)
+    curve(demg(x,mu=paramExp[1],sigma = paramExp[2],lambda = paramExp[3]),0,Tmax,col='green',add = TRUE)
+    curve(dminCtrEMG(x,paramExp_estim,paramCtr,Tmax),0,Tmax,col='red',lty = 2,add = TRUE)
+    curve(demg(x,mu=paramExp[1],sigma = paramExp[2],lambda = paramExp[3]),0,Tmax,col='green',add = TRUE)
+    curve(demg(x,mu=paramExp_estim[1],sigma = paramExp_estim[2],lambda = paramExp_estim[3]),lty = 2,Tmax,col='darkgreen',add = TRUE)
+    
+    
   }
 
   if(!is.null(data.i$Texp_DN)){
