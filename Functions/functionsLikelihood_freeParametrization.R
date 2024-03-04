@@ -28,7 +28,7 @@ from_param_to_log_param_freeParametrization <- function(param){
   return(log_param)
 }
 #=============
-from_logparam_to_param_freeParametrization <- function(log_param){
+from_logparam_to_param_freeParametrization <- function(log_param,constMu = TRUE){
   
   # param 
   #   1 - "lambda_ND_UP"    
@@ -42,6 +42,7 @@ from_logparam_to_param_freeParametrization <- function(log_param){
   #   9 - "mu_e_DN" 
   #   10 - "sigma_e_DN"
   #   11 - "piTrunc_Read_DN"
+  #   12 - "lambda_e if constMu
   
   
   

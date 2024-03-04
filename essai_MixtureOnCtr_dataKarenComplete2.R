@@ -116,19 +116,19 @@ for (i in 1:length(names_data)){
   par(mfrow= c(2,2))
   
   plot(ecdf(Tctr_UP), main = paste(i,'UP ', bestmodelUP,sep=' . '))
-  lines(abs,pCtrData(abs,param=paramCtrUP[[i]],Tmax = data.i$Tmax_Tctr_UP) ,col='red')
+  lines(abs,pCtrData(abs,paramCtr=paramCtrUP[[i]],Tmax = data.i$Tmax_Tctr_UP) ,col='red')
   lines(abs,pexp(abs,1/mean(Tctr_UP)),col='green')
   
   hist(Tctr_UP,freq= FALSE,nclass=50,main = 'UP')
-  lines(abs,dCtrData(abs,param=paramCtrUP[[i]],Tmax = data.i$Tmax_Tctr_UP),col='red',add = TRUE)
+  lines(abs,dCtrData(abs,paramCtr=paramCtrUP[[i]],Tmax = data.i$Tmax_Tctr_UP),col='red')
   lines(abs,dexp(abs,1/mean(Tctr_UP)),col='green')
 
   plot(ecdf(Tctr_DN), main = paste(i,'DN ', bestmodelDN,sep=' . '))
-  lines(abs,pCtrData(abs,param=paramCtrDN[[i]],Tmax = data.i$Tmax_Tctr_DN),col='red')
+  lines(abs,pCtrData(abs,paramCtr=paramCtrDN[[i]],Tmax = data.i$Tmax_Tctr_DN),col='red')
   lines(abs,pexp(abs,1/mean(Tctr_DN)),col='green')
   
   hist(Tctr_DN,freq= FALSE,nclass=50,main = 'DN')
-  lines(abs,dCtrData(abs,param=paramCtrDN[[i]],Tmax = data.i$Tmax_Tctr_DN),col='red')
+  lines(abs,dCtrData(abs,paramCtr=paramCtrDN[[i]],Tmax = data.i$Tmax_Tctr_DN),col='red')
   lines(abs,dexp(abs,1/mean(Tctr_DN)),col='green')
 }
 
@@ -152,7 +152,7 @@ names(echan_exp_corr)
 
 for (i in 1:length(names_data)){
 
-  print(names_data[i])
+  print(c(i,names_data[i]))
 
   load(paste0(where_data,names_data[i]))
   if(!is.null(data.i$Texp_UP)){
@@ -174,16 +174,18 @@ for (i in 1:length(names_data)){
     
     logparamExp <- paramExp
     logparamExp[c(2,3)] <-log(paramExp[c(2,3)])
-    resOptim <- optim(par = logparamExp, fn = loglik_Texp_mixture, paramCtr= paramCtr, Texp = Texp,Tmax = Tmax)
-    paramExp_estim <-resOptim$par
-    paramExp_estim[c(2,3)] <-exp(resOptim$par[c(2,3)])
+    resMaxLoglik <- optim(par = logparamExp, fn = loglik_Texp_mixture, paramCtr= paramCtr, Texp = Texp,Tmax = Tmax)
+    resFitRepEmp <- optim(par = logparamExp, fn = fitRepEmp_Texp_mixture, paramCtr= paramCtr, Texp = Texp,Tmax = Tmax)
+    
+    paramExp_maxLoglik <-resMaxLoglik$par
+    paramExp_maxLoglik[c(2,3)] <-exp(paramExp_maxLoglik[c(2,3)])
     
     hist(Texp,freq = FALSE,nclass= 100)
     curve(dminCtrEMG(x,paramExp,paramCtr,Tmax),0,Tmax,col='red',add = TRUE)
     curve(demg(x,mu=paramExp[1],sigma = paramExp[2],lambda = paramExp[3]),0,Tmax,col='green',add = TRUE)
-    curve(dminCtrEMG(x,paramExp_estim,paramCtr,Tmax),0,Tmax,col='red',lty = 2,add = TRUE)
+    curve(dminCtrEMG(x,paramExp_maxLoglik,paramCtr,Tmax),0,Tmax,col='red',lty = 2,add = TRUE)
     curve(demg(x,mu=paramExp[1],sigma = paramExp[2],lambda = paramExp[3]),0,Tmax,col='green',add = TRUE)
-    curve(demg(x,mu=paramExp_estim[1],sigma = paramExp_estim[2],lambda = paramExp_estim[3]),lty = 2,Tmax,col='darkgreen',add = TRUE)
+    curve(demg(x,mu=paramExp_estim[1],sigma = paramExp_maxLoglik[2],lambda = paramExp_maxLoglik[3]),lty = 2,Tmax,col='darkgreen',add = TRUE)
     
     
   }

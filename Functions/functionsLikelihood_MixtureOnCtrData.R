@@ -196,5 +196,12 @@ loglik_Texp_mixture <-function(logparamExp, paramCtr,Texp,Tmax){
   LL <- -sum(dminCtrEMG(Texp,paramExp,paramCtr,Tmax=Tmax,log = TRUE))
   return(LL)
 }
-
+#----------------------- 
+fitRepEmp_Texp_mixture <-function(logparamExp, paramCtr,Texp,Tmax){
+  
+  paramExp <- logparamExp
+  paramExp[c(2,3)]<- exp(paramExp[c(2,3)])
+  LL <- -sum(dminCtrEMG(Texp,paramExp,paramCtr,Tmax=Tmax,log = TRUE))
+  return(LL)
+}
 
