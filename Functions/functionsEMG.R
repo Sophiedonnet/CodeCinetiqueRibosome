@@ -379,6 +379,13 @@ rminExpExpplusGaussian <- function(n,mu,sigma,lambda,piTrunc,lambda_ND,piTrunc_N
 #   return(f)
 # } 
 
+dRead <- function(x,paramExp,log =FALSE){
+  demg(x,mu = paramExp[1],sigma = paramExp[2],lambda = paramExp[3],log = log)
+}
+pRead <- function(x,paramExp){
+  pemg(x,mu = paramExp[1],sigma = paramExp[2],lambda = paramExp[3])
+}
+
 
 #################################################################################"
 ################################################################################ 

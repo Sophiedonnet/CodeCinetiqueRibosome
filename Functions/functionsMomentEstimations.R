@@ -1,5 +1,5 @@
 #========================================================================
-estim_param_moment <- function(Texp, Tmax,paramCtr){
+estim_param_moment <- function(Texp, Tmax,paramCtr,plot = FALSE){
 #========================================================================
   
  
@@ -11,30 +11,25 @@ estim_param_moment <- function(Texp, Tmax,paramCtr){
   
   
   #--------------------------- data Exp: About mu_e, lambde_c
-  FN_exp <- ecdf(Texp[Texp<Tmax])
-  
-  #par(mfrow = c(1,1))
-  #plot(ecdf(Texp[Texp<Tmax]))
-  #lines(abs,pCtrData(abs,param = paramCtr,Tmax = Tmax),type='l',col='red')
-  
+  FN_exp <- ecdf(Texp)
   abs <- seq(0,Tmax-1,len=1000)
+  #plot(abs,FN_exp(abs),ylim=c(0,1))
+  piUp <- 1-mean(Tctr == Tmax)
+  #lines(abs,piUp*pCtrData(abs,param = paramCtr,Tmax = Tmax),col='red')
   U <- function(x){
-    1-(1-FN_exp(x))/(1-pCtrData(x,param = paramCtr,Tmax = Tmax))
+    1-(1-FN_exp(x))/(1-piUp*pCtrData(x,param = paramCtr,Tmax = Tmax))
   }
-  plot(abs,U(abs),type='l')
+  if(plot){plot(abs,U(abs),type='l')}
   D <- c(0,diff(U(abs)))
   D <- D*(D>0)/sum(D*(D>0)) 
   Echan <- sample(abs,10000,prob = D,replace=TRUE)
-  hist(Echan)
+  if(plot){hist(Echan)}
   paramExp <- rep(NaN,3)
   TUpperBound <- Tmax
   while(is.na(paramExp[2])){
     paramExp <- estim_param_emg(Echan[Echan<TUpperBound])
     TUpperBound <- TUpperBound-10
   }
-  #plot(density(Echan))
-  #lines(abs,demg(abs,mu=paramExp[1],sigma= paramExp[2],paramExp[3]),col='red')
-  
   return(list(paramExpMoment = paramExp, echan_exp_corr = Echan))
 }  
 

@@ -4,10 +4,35 @@ dlnormTrunc <- function(x,mu,sigma,Tmax,log = FALSE){
   if(log){y <- log(y)}
   return(y)
 }
+#-------------------------------
+dexpTrunc <- function(x,lambda,Tmax,log = FALSE){
+  C <- pexp(Tmax,lambda)
+  y <- (x<=Tmax)*dexp(x,lambda)/C
+  if(log){y <- log(y)}
+  return(y)
+}
+#-------------------------------
+pexpTrunc <- function(x,lambda,Tmax){
+  C <- pexp(Tmax,lambda)
+  y <- (x<=Tmax)*pexp(x,lambda)/C
+  return(y)
+}
+
+fitExpoTruncCtr  <- function(Tctr,Tmax){
+  Y <- Tctr[(Tctr < Tmax) & (Tctr > 0)]
+  myF <- function(lambda){
+  U<- -sum(dexpTrunc(x=Y,lambda,Tmax=Tmax,log = TRUE))
+  return(U)}
+  res_optim <- optimize(f=myF, 1/mean(Y)*c(0.1 ,10))
+  res_optim$objective <- - res_optim$objective
+  names(res_optim) <- c('lambda_hat','loglik')
+  return(res_optim)
+} 
 #------------------------------- Fit log norm mixutre
-fitMixtureCtr <- function(Y,Tmax, Kmax, Kmin = 1,select = TRUE ){
+fitMixtureCtr <- function(Tctr,Tmax, Kmax, Kmin = 1,select = TRUE ){
   
   nbK <- Kmax - Kmin + 1 
+  Tctr_trunc <- Tctr[(Tctr<Tmax)&(Tctr>0)]
   allRes <- vector("list", nbK)
   loglik <- rep(-Inf,nbK)
   pk <-  0
@@ -18,20 +43,20 @@ fitMixtureCtr <- function(Y,Tmax, Kmax, Kmin = 1,select = TRUE ){
   
     if(k==1){
       
-      myloglik <- function(param,Tctr,Tmax){
+      myloglik <- function(param,Y,Tmax){
         mu <- param[1]
         sigma <- exp(param[2])
-        return(-sum(dlnormTrunc(Tctr,mu,sigma,Tmax,log = TRUE)))
+        return(-sum(dlnormTrunc(Y,mu,sigma,Tmax,log = TRUE)))
       } 
-      res_optim <- optim(par = c(mean(log(Y)),log(sd(log(Y)))) ,fn=myloglik,Tctr = Y,Tmax = Tmax)
+      res_optim <- optim(par = c(mean(log(Tctr_trunc)),log(sd(log(Tctr_trunc)))) ,fn=myloglik,Y = Tctr_trunc,Tmax = Tmax)
       allRes[[1]]<- list(mu=res_optim$par[1],sigma=exp(res_optim$par[2]),lambda=1)
-      allRes[[1]]$loglik = sum(dlnormTrunc(Y,allRes[[1]]$mu,allRes[[1]]$sigma,Tmax = Tmax,log = TRUE))
+      allRes[[1]]$loglik = sum(dlnormTrunc(Tctr_trunc,allRes[[1]]$mu,allRes[[1]]$sigma,Tmax = Tmax,log = TRUE))
       allRes[[1]]$loglik -> loglik[1]
     }
     else{
       tryCatch({
-        init <- mixtools::normalmixEM(Y, maxit = 10000,k=k,maxrestarts = 50)
-        allRes[[pk]] <- mixtools::normalmixEM(log(Y),mu = log(init$mu), maxit = 20000,k=k,maxrestarts = 20,verb = FALSE)
+        init <- mixtools::normalmixEM(Tctr_trunc, maxit = 10000,k=k,maxrestarts = 50)
+        allRes[[pk]] <- mixtools::normalmixEM(log(Tctr_trunc),mu = log(init$mu), maxit = 20000,k=k,maxrestarts = 20,verb = FALSE)
         loglik[pk] <- allRes[[pk]]$loglik
         },
         error = function(e){skip_to_next <<-TRUE}
@@ -40,7 +65,7 @@ fitMixtureCtr <- function(Y,Tmax, Kmax, Kmin = 1,select = TRUE ){
     }  
     
   }
-  Crit <- loglik - 1/2*(3*(Kmin:Kmax)-1)*length(Y) 
+  Crit <- loglik - 1/2*(3*(Kmin:Kmax)-1)*length(Tctr) 
   
   ##########################################
   if (select){
@@ -191,17 +216,36 @@ rminCtrEMG <- function(n,paramExp,paramCtr,Tmax){
 #----------------------- 
 loglik_Texp_mixture <-function(logparamExp, paramCtr,Texp,Tmax){
   
-  paramExp <- logparamExp
-  paramExp[c(2,3)]<- exp(paramExp[c(2,3)])
-  LL <- -sum(dminCtrEMG(Texp,paramExp,paramCtr,Tmax=Tmax,log = TRUE))
+  paramExp <- exp(logparamExp)
+  LL <- -sum(dminCtrEMG(Texp[Texp<Tmax],paramExp,paramCtr,Tmax=Tmax,log = TRUE))
   return(LL)
 }
 #----------------------- 
 fitRepEmp_Texp_mixture <-function(logparamExp, paramCtr,Texp,Tmax){
   
-  paramExp <- logparamExp
-  paramExp[c(2,3)]<- exp(paramExp[c(2,3)])
-  LL <- -sum(dminCtrEMG(Texp,paramExp,paramCtr,Tmax=Tmax,log = TRUE))
+  paramExp <- exp(logparamExp)
+  t <- sort(Texp[Texp<Tmax])
+  FN_exp <- ecdf(t)
+  yEmp <- FN_exp(t)
+  yMod <- pminCtrEMG(t,paramExp,paramCtr,Tmax=Tmax)
+  LL <- sum((yEmp-yMod)^2)
   return(LL)
+}
+
+#---------------------------- 
+estimProc_Up_or_Dn <- function(Texp,Tmax, paramCtr){
+  
+  #---------- moment
+  resMoment <- estim_param_moment(Texp, Tmax,paramCtr)
+  paramExp_Moment <- resMoment$paramExpMoment
+  
+  #---------- Fit repartition function
+  resFitRepEmp <- optim(par = log(paramExp_Moment), fn = fitRepEmp_Texp_mixture, paramCtr= paramCtr, Texp = Texp,Tmax = Tmax)
+  paramExp_FitRepEmp <-exp(resFitRepEmp$par)
+
+  #---------- Fit max likelihood 
+  resMaxLoglik <- optim(par = log(paramExp_Moment), fn = loglik_Texp_mixture, paramCtr= paramCtr, Texp = Texp,Tmax = Tmax)
+  estim = list(moment = paramExp_Moment, loglik =  exp(resMaxLoglik$par), fitFn  = exp(resFitRepEmp$par))
+  return(estim)
 }
 
