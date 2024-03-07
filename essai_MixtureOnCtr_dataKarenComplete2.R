@@ -64,7 +64,7 @@ source('Functions/functionsEMG.R')
 ##################################################
 where_data <- c('DataKarenComplete/FormattedData/')
 names_data <- list.files(where_data)
-nbData <- length(names_data)
+nbData <- 1 # length(names_data)
 for (i in 1:nbData){
 # 
    print(i)
@@ -121,21 +121,23 @@ for (i in 1:nbData){
   
   par(mfrow= c(2,2))
   plot(ecdf(data.i$Tctr_UP), main = paste(i,'UP ', bestmodelUP,sep=' . '))
-  lines(abs,pi_ctrUP*pCtrData(abs,paramCtr=paramCtrUP[[i]],Tmax = data.i$Tmax_Tctr_UP),col='red',lwd = 2)
+  lines(abs,pCtrData(abs,paramCtr=paramCtrUP[[i]],Tmax = data.i$Tmax_Tctr_UP),col='red',lwd = 2)
   lines(abs,pi_ctrUP*pexpTrunc(abs,lambda_hat_UP,Tmax = data.i$Tmax_Tctr_UP),col='purple')
   
-  hist(Tctr_UP[Tctr_UP<data.i$Tmax_Tctr_UP],freq= FALSE,nclass=50,main = 'UP')
+  
+  
+  hist(Tctr_UP,freq= FALSE,nclass=50,main = 'UP')
   lines(abs,dCtrData(abs,paramCtr=paramCtrUP[[i]],Tmax = data.i$Tmax_Tctr_UP),col='red',lwd = 2)
-  lines(abs,dexpTrunc(abs,lambda_hat_UP,Tmax = data.i$Tmax_Tctr_UP),col='purple',lwd = 2)
+  lines(abs,pi_ctrUP*dexpTrunc(abs,lambda_hat_UP,Tmax = data.i$Tmax_Tctr_UP),col='purple',lwd = 2)
 
   
   plot(ecdf(data.i$Tctr_DN), main = paste(i,'DN ', bestmodelDN,sep=' . '))
-  lines(abs,pi_ctrDN*pCtrData(abs,paramCtr=paramCtrDN[[i]],Tmax = data.i$Tmax_Tctr_DN),col='red',lwd = 2)
+  lines(abs,pCtrData(abs,paramCtr=paramCtrDN[[i]],Tmax = data.i$Tmax_Tctr_DN),col='red',lwd = 2)
   lines(abs,pi_ctrDN*pexpTrunc(abs,lambda_hat_DN,Tmax = data.i$Tmax_Tctr_UP),col='purple',lwd = 2)
   
-  hist(Tctr_DN[Tctr_DN<data.i$Tmax_Tctr_DN],freq= FALSE,nclass=50,main = 'DN')
+  hist(Tctr_DN,freq= FALSE,nclass=50,main = 'DN')
   lines(abs,dCtrData(abs,paramCtr=paramCtrDN[[i]],Tmax = data.i$Tmax_Tctr_DN),col='red',lwd = 2)
-  lines(abs,dexpTrunc(abs,lambda_hat_DN,Tmax = data.i$Tmax_Tctr_DN),col='purple',lwd = 2)
+  lines(abs,pi_ctrDN*dexpTrunc(abs,lambda_hat_DN,Tmax = data.i$Tmax_Tctr_DN),col='purple',lwd = 2)
 
   }
 
@@ -149,8 +151,6 @@ for (i in 1:nbData){
 #############################################
 
 
-#-------------------------------------------- Stoackage param estimés
-ndData <- 4
 for (i in 1:ndData){
 
   print(c(i,names_data[i]))
@@ -174,12 +174,11 @@ for (i in 1:ndData){
   # 
   
   if(!is.null(data.i$Texp_UP)){
-    Texp_UP  <- data.i$Texp_UP
-    Tctr_UP  <- data.i$Tctr_UP
-    paramCtr_UP <- paramCtrUP[[i]]
-    Tmax_UP <- data.i$Tmax_Texp_UP
-    pi_expUP <- 1-mean(Texp_UP==Tmax_UP)
-    resEstim_UP <- estimProc_Up_or_Dn(Texp_UP,Tctr_UP,Tmax_UP, paramCtr_UP)
+    Texp  <- data.i$Texp_UP
+    Tctr  <- data.i$Tctr_UP
+    paramCtr <- paramCtrUP[[i]]
+    Tmax <- data.i$Tmax_Texp_UP
+    resEstim_UP <- estimProc_Up_or_Dn(Texp,Tctr,Tmax, paramCtr)
   }
 
   if(!is.null(data.i$Texp_DN)){

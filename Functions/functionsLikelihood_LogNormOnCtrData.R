@@ -9,6 +9,9 @@ dlnormTrunc <- function(x,mu,sigma,Tmax,log = FALSE){
 plnormTrunc <- function(x,mu,sigma,Tmax){
   C <- plnorm(Tmax,mu,sigma)
   y <- (x<=Tmax)*plnorm(x,mu,sigma)/C
+  if(length(x>=Tmax)>0){
+    y[x>=Tmax] = 1}
+  
   return(y)
 }
 
@@ -66,6 +69,7 @@ fitLogNormTruncCtr <- function(Tctr,Tmax){
   res_optim <- optim(par =  param_init ,fn=myF,Y = Y,Tmax = Tmax)
   paramCtr <- res_optim$par
   paramCtr[2] <- exp(paramCtr[2])
+  paramCtr[3] <- mean(Tctr==Tmax)
   res <- list(paramCtr = paramCtr, loglik  = -res_optim$value)
   return(res)
 }
@@ -73,19 +77,23 @@ fitLogNormTruncCtr <- function(Tctr,Tmax){
 
 #-------------------------  density log-Normal mixture on Ctrl 
 pCtrData  <- function(t, paramCtr,Tmax){
-  res <- plnormTrunc(t,paramCtr[1],paramCtr[2], Tmax = Tmax)
+  res <- (1-paramCtr[3])*plnormTrunc(t,paramCtr[1],paramCtr[2], Tmax = Tmax)
+  res[t>=Tmax]=1
   return(res)
  }
 
 #-------------------------  density log-Normal mixture on Ctrl 
 dCtrData  <- function(t, paramCtr,Tmax,log = FALSE){
-  res <- dlnormTrunc(t,paramCtr[1],paramCtr[2], Tmax = Tmax,log = log)
+  res <- (1-paramCtr[3])*dlnormTrunc(t,paramCtr[1],paramCtr[2], Tmax = Tmax,log = log)
+  res[t==Tmax] <- paramCtr[3]
   return(res)
 }
 
 #-------------------------  density log-Normal mixture on Ctrl 
-rCtrData  <- function(t, paramCtr,Tmax){
-  res <- dlnormTrunc(n,paramCtr[1],paramCtr[2], Tmax = Tmax,log = log)
+rCtrData  <- function(n, paramCtr,Tmax){
+  Z <- rbinom(n,paramCtr[3])
+  res <- rlnormTrunc(n,paramCtr[1],paramCtr[2], Tmax = Tmax,log = log)
+  res[Z==1] = Tmax
   return(res)
 }
 

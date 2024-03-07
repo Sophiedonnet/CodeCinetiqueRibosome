@@ -3,7 +3,6 @@ estim_param_moment <- function(Texp, Tctr, Tmax,paramCtr,plot = FALSE){
 #========================================================================
   
  
-  
   paramRead <- rep(NaN,3)
   names(paramRead) <- c('mu','sigma','lambda')
   
@@ -11,35 +10,45 @@ estim_param_moment <- function(Texp, Tctr, Tmax,paramCtr,plot = FALSE){
   
   
   #--------------------------- data Exp: About mu_e, lambde_c
+  par(mfrow=c(1,1))
   FN_exp <- ecdf(Texp)
-  abs <- sort(unique(Texp))
-  plot(abs,FN_exp(abs))
-  piCtr <- 1-mean(Tctr==Tmax)
-  lines(abs,piCtr*pCtrData(abs,paramCtr = paramCtr,Tmax = Tmax),col='red')
+  abs <- c(sort(unique(Texp)),100)
+  plot(abs,FN_exp(abs),type='s')
+  plot(ecdf(Tctr),add = TRUE,col='red')
+  lines(abs,pCtrData(abs,paramCtr = paramCtr,Tmax = Tmax),col='red')
   
-  FRead <- function(x,Tmax,piCtr,paramCtr){
-    y <- 1-(1-FN_exp(x))/(1-piCtr*pCtrData(x,paramCtr = paramCtr,Tmax = Tmax))
-    w <- which(x==Tmax)
-    #if(length(w)>0){
-    #  y[w] <-  1-(1-FN_exp(x[w]))/piCtr
-    #}
+  FnRead <- function(x,Tmax,paramCtr){
+    y <- 1-(1-FN_exp(x))/(1-pCtrData(x,paramCtr = paramCtr,Tmax = Tmax))
+    y[x>=Tmax] = 1
     return(y)
   }
-  U <- FRead(abs,Tmax,piCtr,paramCtr)
-  plot(abs,U)
+  # vérif 
+  
+  abs <- 0:Tmax 
+  U <- FRead(abs,Tmax,paramCtr)
+  plot(abs,U,type='l')
   plot(diff(U)/diff(abs))
   P <- c(0,diff(U))
   w <- which(P<0)
   P[w] <- 0
-  P = P/sum(P)
-  EchanRead <- sample(abs,10000,prob = P,replace = TRUE)
-  curve(FRead(x,Tmax,piCtr,paramCtr),0,Tmax)
+  
+  Z <- rbinom(10000,1,P[Tmax+1])
+  Echan <- sample(0:(Tmax-1),10000,prob = P[-(Tmax+1)],replace = TRUE)
+  EchanRead <- Z*Tmax + (1-Z)*Echan
+  curve(FRead(x,Tmax,paramCtr),0,Tmax)
   plot(ecdf(EchanRead),add  =TRUE)
   
+  FnRead2  <- ecdf(EchanRead)
+  plot(abs,FnRead2(abs),type='l')
+  
+  FnExp2 <- function(x,Tmax,paramCtr){
+    y <- 1-(1-FnRead2(x))*(1-pCtrData(x,paramCtr = paramCtr,Tmax = Tmax))
+    y[x>=Tmax] = 1
+    return(y)
+  }
+  plot(abs,FN_exp(abs),type='s')
+  lines(abs,FnExp2(abs,Tmax,paramCtr),col='red')
   estFexp <- function(t,paramCtr,piCtr,EchanRead){
-    Fn <- ecdf(EchanRead)
-    V <- FRead(t,Tmax,piCtr,paramCtr)
-    y <-  1-(1-piCtr*pCtrData(t,paramCtr = paramCtr,Tmax = Tmax))*(1-V)
     return(y)
   }
   
