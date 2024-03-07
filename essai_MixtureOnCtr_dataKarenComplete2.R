@@ -15,7 +15,7 @@ rm(list=ls()) ### efface toutes les variables en mémoire
 library(ggplot2)
 library(dplyr)
 library(emg)
-source('Functions/functionsLikelihood_MixtureOnCtrData.R')
+source('Functions/functionsLikelihood_LogNormOnCtrData.R')
 source('Functions/functionsMomentEstimations.R')
 source('Functions/functionsPlotPostInference.R')
 source('Functions/functionsEMG.R')
@@ -64,7 +64,8 @@ source('Functions/functionsEMG.R')
 ##################################################
 where_data <- c('DataKarenComplete/FormattedData/')
 names_data <- list.files(where_data)
-for (i in 1:length(names_data)){
+nbData <- length(names_data)
+for (i in 1:nbData){
 # 
    print(i)
    w <- paste0(where_data,names_data[i])
@@ -81,37 +82,37 @@ for (i in 1:length(names_data)){
 ##################################################
 where_data <- c('DataKarenComplete/FormattedData/')
 names_data <- list.files(where_data)
-Kmax = 1
-paramCtrUP <- vector("list",length(names_data))
-paramCtrDN <- vector("list",length(names_data))
 
-for (i in 1:length(names_data)){
+paramCtrDN <- paramCtrUP <- vector("list",nbData)
+
+
+for (i in 1:nbData){
   # 
   print(i)
   w <- paste0(where_data,names_data[i])
   load(w)
   
-  #-------------------
-  resFitMixture <- vector("list",2)
-  names(resFitMixture) <- c('UP','DN')
   #------------------- 
   
   Tctr_UP <- data.i$Tctr_UP
-  paramCtrUP[[i]] <-  fitMixtureCtr(Tctr_UP,Tmax =data.i$Tmax_Tctr_UP ,Kmax = Kmax, select = TRUE)
+  res_LogNormTrun_UP <-  fitLogNormTruncCtr(Tctr_UP,Tmax =data.i$Tmax_Tctr_UP)
+  paramCtrUP[[i]] <- res_LogNormTrun_UP$paramCtr
   res_ExpoTrunc_UP <-  fitExpoTruncCtr(Tctr_UP,Tmax =data.i$Tmax_Tctr_UP)
   lambda_hat_UP <- res_ExpoTrunc_UP$lambda_hat
   logLikExp <- res_ExpoTrunc_UP$loglik
-  logLikLogNormal <-  paramCtrUP[[i]]$loglik
+  logLikLogNormal <-  res_LogNormTrun_UP$loglik
   if(logLikExp>logLikLogNormal){bestmodelUP = 'exp'}else{bestmodelUP='lognormal'}
-  
+  print(bestmodelUP)
   #------------------- 
   Tctr_DN <- data.i$Tctr_DN
-  paramCtrDN[[i]] <-  fitMixtureCtr(Tctr_DN,Tmax =data.i$Tmax_Tctr_DN,Kmax = Kmax,select   = TRUE)
+  res_LogNormTrun_DN <-  fitLogNormTruncCtr(Tctr_DN,Tmax =data.i$Tmax_Tctr_DN)
+  paramCtrDN[[i]] <- res_LogNormTrun_DN$paramCtr
   res_ExpoTrunc_DN <-  fitExpoTruncCtr(Tctr_DN,Tmax =data.i$Tmax_Tctr_DN)
   lambda_hat_DN <- res_ExpoTrunc_DN$lambda_hat
   logLikExp <- res_ExpoTrunc_DN$loglik
-  logLikLogNormal <-  paramCtrUP[[i]]$loglik
+  logLikLogNormal <-  res_LogNormTrun_DN$loglik
   if(logLikExp>logLikLogNormal){bestmodelDN = 'exp'}else{bestmodelDN='lognormal'}
+  print(bestmodelUP)
   
   
   abs = seq(0,data.i$Tmax_Tctr_UP,len = 1000)
@@ -119,28 +120,23 @@ for (i in 1:length(names_data)){
   pi_ctrDN <- (1-mean(data.i$Tctr_DN==data.i$Tmax_Tctr_DN))
   
   par(mfrow= c(2,2))
-  
-  
-  plot(ecdf(data.i$Tctr_UP), main = paste(i,'UP ', bestmodelUP,sep=' . '),col='green')
-  lines(abs,pi_ctrUP*pCtrData(abs,paramCtr=paramCtrUP[[i]],Tmax = data.i$Tmax_Tctr_UP))
+  plot(ecdf(data.i$Tctr_UP), main = paste(i,'UP ', bestmodelUP,sep=' . '))
+  lines(abs,pi_ctrUP*pCtrData(abs,paramCtr=paramCtrUP[[i]],Tmax = data.i$Tmax_Tctr_UP),col='red',lwd = 2)
   lines(abs,pi_ctrUP*pexpTrunc(abs,lambda_hat_UP,Tmax = data.i$Tmax_Tctr_UP),col='purple')
-  lines(abs,pi_ctrUP*pexp(abs,1/mean(Tctr_UP[Tctr_UP<data.i$Tmax_Tctr_UP])),col='orange')
   
-  hist(Tctr_UP[Tctr_UP<data.i$Tmax_Tctr_UP],freq= FALSE,nclass=50,main = 'UP',col='green')
-  lines(abs,dCtrData(abs,paramCtr=paramCtrUP[[i]],Tmax = data.i$Tmax_Tctr_UP))
-  lines(abs,dexpTrunc(abs,lambda_hat_UP,Tmax = data.i$Tmax_Tctr_UP),col='purple')
-  lines(abs,dexp(abs,1/mean(Tctr_UP[Tctr_UP<data.i$Tmax_Tctr_UP])),col='orange')
+  hist(Tctr_UP[Tctr_UP<data.i$Tmax_Tctr_UP],freq= FALSE,nclass=50,main = 'UP')
+  lines(abs,dCtrData(abs,paramCtr=paramCtrUP[[i]],Tmax = data.i$Tmax_Tctr_UP),col='red',lwd = 2)
+  lines(abs,dexpTrunc(abs,lambda_hat_UP,Tmax = data.i$Tmax_Tctr_UP),col='purple',lwd = 2)
+
   
-  
-  plot(ecdf(data.i$Tctr_DN), main = paste(i,'DN ', bestmodelDN,sep=' . '),col='green')
-  lines(abs,pi_ctrDN*pCtrData(abs,paramCtr=paramCtrDN[[i]],Tmax = data.i$Tmax_Tctr_DN))
-  lines(abs,pi_ctrDN*pexpTrunc(abs,lambda_hat_DN,Tmax = data.i$Tmax_Tctr_UP),col='purple')
-  lines(abs,pi_ctrDN*pexp(abs,1/mean(Tctr_DN[Tctr_DN<data.i$Tmax_Tctr_DN])),col='orange')
+  plot(ecdf(data.i$Tctr_DN), main = paste(i,'DN ', bestmodelDN,sep=' . '))
+  lines(abs,pi_ctrDN*pCtrData(abs,paramCtr=paramCtrDN[[i]],Tmax = data.i$Tmax_Tctr_DN),col='red',lwd = 2)
+  lines(abs,pi_ctrDN*pexpTrunc(abs,lambda_hat_DN,Tmax = data.i$Tmax_Tctr_UP),col='purple',lwd = 2)
   
   hist(Tctr_DN[Tctr_DN<data.i$Tmax_Tctr_DN],freq= FALSE,nclass=50,main = 'DN')
-  lines(abs,dCtrData(abs,paramCtr=paramCtrDN[[i]],Tmax = data.i$Tmax_Tctr_DN),col='red')
-  lines(abs,dexpTrunc(abs,lambda_hat_DN,Tmax = data.i$Tmax_Tctr_DN),col='green')
-  lines(abs,dexp(abs,1/mean(Tctr_DN[Tctr_DN<data.i$Tmax_Tctr_DN])),col='orange')
+  lines(abs,dCtrData(abs,paramCtr=paramCtrDN[[i]],Tmax = data.i$Tmax_Tctr_DN),col='red',lwd = 2)
+  lines(abs,dexpTrunc(abs,lambda_hat_DN,Tmax = data.i$Tmax_Tctr_DN),col='purple',lwd = 2)
+
   }
 
 
@@ -154,49 +150,53 @@ for (i in 1:length(names_data)){
 
 
 #-------------------------------------------- Stoackage param estimés
-
-for (i in 1:length(names_data)){
+ndData <- 4
+for (i in 1:ndData){
 
   print(c(i,names_data[i]))
 
   load(paste0(where_data,names_data[i]))
   
-  pi_ctrUP <- (1-mean(data.i$Tctr_UP==data.i$Tmax_Tctr_UP))
-  pi_ctrDN <- (1-mean(data.i$Tctr_DN==data.i$Tmax_Tctr_DN))
-  pi_expUP <- (1-mean(data.i$Texp_UP==data.i$Tmax_Texp_UP))
-  pi_expDN <- (1-mean(data.i$Texp_DN==data.i$Tmax_Texp_DN))
-  
-  par(mfrow=c(2,2))
-  hist(data.i$Texp_UP,freq = FALSE,nclass= 50); abline(v = mean(data.i$Texp_UP))
-  hist(data.i$Tctr_UP,freq = FALSE,nclass= 50,add = TRUE,col='green'); abline(v = mean(data.i$Tctr_UP),col='red')
-  plot(ecdf(data.i$Texp_UP)); abline(v = mean(data.i$Texp_UP))
-  plot(ecdf(data.i$Tctr_UP),add = TRUE,col='green'); abline(v = mean(data.i$Tctr_UP),col='green')
-  hist(data.i$Texp_DN,freq = FALSE,nclass= 50); abline(v = mean(data.i$Texp_UP))
-  hist(data.i$Tctr_DN,freq = FALSE,nclass= 50,add = TRUE,col='green'); abline(v = mean(data.i$Tctr_UP),col='red')
-  plot(ecdf(data.i$Texp_DN)); abline(v = mean(data.i$Texp_UP))
-  plot(ecdf(data.i$Tctr_DN),add = TRUE,col='green'); abline(v = mean(data.i$Tctr_UP),col='green')
-  
+  # pi_ctrUP <- (1-mean(data.i$Tctr_UP==data.i$Tmax_Tctr_UP))
+  # pi_ctrDN <- (1-mean(data.i$Tctr_DN==data.i$Tmax_Tctr_DN))
+  # pi_expUP <- (1-mean(data.i$Texp_UP==data.i$Tmax_Texp_UP))
+  # pi_expDN <- (1-mean(data.i$Texp_DN==data.i$Tmax_Texp_DN))
+  # 
+  # par(mfrow=c(2,2))
+  # hist(data.i$Texp_UP,freq = FALSE,nclass= 50); abline(v = mean(data.i$Texp_UP))
+  # hist(data.i$Tctr_UP,freq = FALSE,nclass= 50,add = TRUE,col='green'); abline(v = mean(data.i$Tctr_UP),col='red')
+  # plot(ecdf(data.i$Texp_UP)); abline(v = mean(data.i$Texp_UP))
+  # plot(ecdf(data.i$Tctr_UP),add = TRUE,col='green'); abline(v = mean(data.i$Tctr_UP),col='green')
+  # hist(data.i$Texp_DN,freq = FALSE,nclass= 50); abline(v = mean(data.i$Texp_UP))
+  # hist(data.i$Tctr_DN,freq = FALSE,nclass= 50,add = TRUE,col='green'); abline(v = mean(data.i$Tctr_UP),col='red')
+  # plot(ecdf(data.i$Texp_DN)); abline(v = mean(data.i$Texp_UP))
+  # plot(ecdf(data.i$Tctr_DN),add = TRUE,col='green'); abline(v = mean(data.i$Tctr_UP),col='green')
+  # 
   
   if(!is.null(data.i$Texp_UP)){
-    
-    
-    Texp_UP  <- data.i$Texp_UP #[data.i$Texp_UP< data.i$Tmax_Texp_UP]
+    Texp_UP  <- data.i$Texp_UP
+    Tctr_UP  <- data.i$Tctr_UP
     paramCtr_UP <- paramCtrUP[[i]]
     Tmax_UP <- data.i$Tmax_Texp_UP
-    resEstim_UP <- estimProc_Up_or_Dn(Texp_UP,Tmax_UP, paramCtr_UP)
+    pi_expUP <- 1-mean(Texp_UP==Tmax_UP)
+    resEstim_UP <- estimProc_Up_or_Dn(Texp_UP,Tctr_UP,Tmax_UP, paramCtr_UP)
   }
 
   if(!is.null(data.i$Texp_DN)){
     Texp_DN <- data.i$Texp_DN#[data.i$Texp_DN< data.i$Tmax_Texp_DN]
+    Tctr_DN  <- data.i$Tctr_DN
     paramCtr_DN <- paramCtrDN[[i]]
     Tmax_DN <- data.i$Tmax_Texp_DN
-    resEstim_DN <- estimProc_Up_or_Dn(Texp_DN,Tmax_DN, paramCtr_DN)
+    resEstim_DN <- estimProc_Up_or_Dn(Texp_DN,Tctr_DN,Tmax_DN, paramCtr_DN)
   }
+}
+
   par(mfrow = c(2,2))
-  plot(ecdf(Texp_UP))
-  #curve(pi_expUP*pminCtrEMG(x,resEstim_UP$moment,paramCtr_UP,Tmax_UP),0,Tmax,col='blue',lwd= 2,add = TRUE)
-  curve(pi_expUP*pminCtrEMG(x,resEstim_UP$loglik,paramCtr_UP,Tmax_UP),0,Tmax,col='red',lwd= 2,lty = 2,add = TRUE)
-  curve(pi_expUP*pminCtrEMG(x,resEstim_UP$fitFn,paramCtr_UP,Tmax_UP),0,Tmax,col='orange',lwd= 2,lty = 3,add = TRUE)
+  plot(ecdf(Texp_UP[Texp_UP<Tmax_UP]),main = 'UP')
+  x <- seq(0,98,by=0.1)
+  lines(x, pExpData(x,resEstim_UP$moment,paramCtr_UP,Tmax_UP),col='blue',lwd= 2)
+  lines(x, pExpData(x,resEstim_UP$loglik,paramCtr_UP,Tmax_UP),col='red',lwd= 2,lty = 2)
+  lines(x, pExpData(x,resEstim_UP$fitFn,paramCtr_UP,Tmax_UP),col='orange',lwd= 2,lty = 3)
   plot(ecdf(Tctr_UP),add = TRUE,col='green')
   curve(pi_ctrUP*pCtrData(x,paramCtr_UP,Tmax_UP),col='green',lwd= 2,lty = 3,add = TRUE)
 

@@ -1,36 +1,79 @@
 #========================================================================
-estim_param_moment <- function(Texp, Tmax,paramCtr,plot = FALSE){
+estim_param_moment <- function(Texp, Tctr, Tmax,paramCtr,plot = FALSE){
 #========================================================================
   
  
   
-  paramExp <- rep(0,3)
-  names(paramExp) <- c('mu','sigma','lambda')
+  paramRead <- rep(NaN,3)
+  names(paramRead) <- c('mu','sigma','lambda')
   
   
   
   
   #--------------------------- data Exp: About mu_e, lambde_c
   FN_exp <- ecdf(Texp)
-  abs <- seq(0,Tmax-1,len=1000)
-  #plot(abs,FN_exp(abs),ylim=c(0,1))
-  piUp <- 1-mean(Tctr == Tmax)
-  #lines(abs,piUp*pCtrData(abs,param = paramCtr,Tmax = Tmax),col='red')
-  U <- function(x){
-    1-(1-FN_exp(x))/(1-piUp*pCtrData(x,param = paramCtr,Tmax = Tmax))
+  abs <- sort(unique(Texp))
+  plot(abs,FN_exp(abs))
+  piCtr <- 1-mean(Tctr==Tmax)
+  lines(abs,piCtr*pCtrData(abs,paramCtr = paramCtr,Tmax = Tmax),col='red')
+  
+  FRead <- function(x,Tmax,piCtr,paramCtr){
+    y <- 1-(1-FN_exp(x))/(1-piCtr*pCtrData(x,paramCtr = paramCtr,Tmax = Tmax))
+    w <- which(x==Tmax)
+    #if(length(w)>0){
+    #  y[w] <-  1-(1-FN_exp(x[w]))/piCtr
+    #}
+    return(y)
   }
-  if(plot){plot(abs,U(abs),type='l')}
-  D <- c(0,diff(U(abs)))
-  D <- D*(D>0)/sum(D*(D>0)) 
-  Echan <- sample(abs,10000,prob = D,replace=TRUE)
-  if(plot){hist(Echan)}
-  paramExp <- rep(NaN,3)
+  U <- FRead(abs,Tmax,piCtr,paramCtr)
+  plot(abs,U)
+  plot(diff(U)/diff(abs))
+  P <- c(0,diff(U))
+  w <- which(P<0)
+  P[w] <- 0
+  P = P/sum(P)
+  EchanRead <- sample(abs,10000,prob = P,replace = TRUE)
+  curve(FRead(x,Tmax,piCtr,paramCtr),0,Tmax)
+  plot(ecdf(EchanRead),add  =TRUE)
+  
+  estFexp <- function(t,paramCtr,piCtr,EchanRead){
+    Fn <- ecdf(EchanRead)
+    V <- FRead(t,Tmax,piCtr,paramCtr)
+    y <-  1-(1-piCtr*pCtrData(t,paramCtr = paramCtr,Tmax = Tmax))*(1-V)
+    return(y)
+  }
+  
+  plot(ecdf(Texp_UP))
+  curve(estFexp(x,paramCtr,piCtr,EchanRead),col='red',add = TRUE)
+  
   TUpperBound <- Tmax
-  while(is.na(paramExp[2])){
-    paramExp <- estim_param_emg(Echan[Echan<TUpperBound])
+  while(is.na(paramRead[2])){
+    paramRead <- estim_param_emg(Echan[Echan<TUpperBound])
     TUpperBound <- TUpperBound-10
   }
-  return(list(paramExpMoment = paramExp, echan_exp_corr = Echan))
+  curve(pemg(x,paramRead[1],paramRead[2],paramRead[3]),add  = TRUE,col='red')
+  
+  
+  
+  myF <-function(logparamRead,Tmax){
+    t <- seq(0,Tmax,by = 0.1)
+    paramRead <- exp(logparamRead)
+    yEmp <- FRead(t,Tmax,piUp)
+    yP <- pemg(t,mu,sigma,lambda) - pemg(0,mu,sigma,lambda)
+    C <- pemg(Tmax,mu,sigma,lambda) - pemg(0,mu,sigma,lambda)
+    
+    LL <- sum((yEmp-yMod)^2)
+    return(LL)
+  }
+  
+  
+  
+  
+  plot(ecdf(Echan))
+  curve((1-sum(Echan==Tmax))*pemg(x,mu=paramRead[1],sigma = paramRead[2],lambda = paramRead[3]),add = TRUE)
+  curve(plnorm(x,meanlog = mean(log(Echan)),sdlog =  sd(log(Echan))),add = TRUE,col='green')
+  
+  return(list(paramRead = paramRead, echan_exp_corr = Echan))
 }  
 
 
