@@ -82,7 +82,7 @@ for (i in 1:nbData){
 ##################################################
 where_data <- c('DataKarenComplete/FormattedData/')
 names_data <- list.files(where_data)
-
+ndData <-length(names_data)
 paramCtrDN <- paramCtrUP <- vector("list",nbData)
 
 
